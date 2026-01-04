@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "remote-bridge": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/bridge-ui/build/bin/bridge-ui.exe",
+      "args": ["--mcp"]
+    }
+  }
+}

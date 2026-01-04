@@ -1,0 +1,54 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/joho/godotenv"
+	"github.com/resend/resend-go/v2"
+)
+
+func main() {
+	fmt.Println("🔍 Verify Resend Configuration...")
+
+	// 1. Load .env
+	exePath, _ := os.Executable()
+	envPath := filepath.Join(filepath.Dir(exePath), ".env")
+	// Try local .env if exe one fails (run from source)
+	if _, err := os.Stat(envPath); os.IsNotExist(err) {
+		envPath = ".env"
+	}
+	
+	godotenv.Load(envPath)
+
+	apiKey := os.Getenv("RESEND_API_KEY")
+	userEmail := os.Getenv("USER_EMAIL")
+
+	fmt.Printf("📂 Loaded .env from: %s\n", envPath)
+	fmt.Printf("🔑 API Key: %s... (Length: %d)\n", apiKey[:5], len(apiKey))
+	fmt.Printf("📧 Email: %s\n", userEmail)
+
+	if apiKey == "" || userEmail == "" {
+		fmt.Println("❌ Missing RESEND_API_KEY or USER_EMAIL")
+		return
+	}
+
+	// 2. Send Test Email
+	client := resend.NewClient(apiKey)
+
+	params := &resend.SendEmailRequest{
+		From:    "onboarding@resend.dev",
+		To:      []string{userEmail},
+		Subject: "✅ Resend Verification Test",
+		Html:    "<p>If you see this, <strong>Resend is working</strong>!</p>",
+	}
+
+	fmt.Println("🚀 Sending test email...")
+	sent, err := client.Emails.Send(params)
+	if err != nil {
+		fmt.Printf("❌ FAILED: %v\n", err)
+	} else {
+		fmt.Printf("✅ SUCCESS! ID: %s\n", sent.Id)
+	}
+}

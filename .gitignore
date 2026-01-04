@@ -1,0 +1,57 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bridge.exe
+mcp-adapter.exe
+
+# Build artifacts
+bridge-ui/build/
+bridge-ui/frontend/dist/
+bridge-ui/frontend/node_modules/
+**/bin/
+**/obj/
+
+# Test files
+test-build.exe
+test-*.json
+
+# Environment and secrets
+.env
+bridge-config.json
+tunnel-url.txt
+*.log
+
+# Wails
+.wails-build-log
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE
+.vscode/*
+!.vscode/mcp.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+temp.txt
+temp2.txt
+
+# Go
+vendor/
+*.test
+*.out
+go.work
+
+# OS
+Thumbs.db
