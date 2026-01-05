@@ -286,7 +286,7 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 	responseURL := fmt.Sprintf("%s/respond?id=%s", publicURL, requestID)
 
 	// [FIX] Add the link to the TEXT as well (Backup if button fails)
-	message := fmt.Sprintf("🤖 *Agent Paused*\n\n❓ %s\n\n� [Open Control Panel](%s)", question, responseURL)
+	message := fmt.Sprintf("🤖 *Agent Paused*\n\n❓ %s\n\n🔗 [Open Control Panel](%s)", question, responseURL)
 
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = "Markdown"
