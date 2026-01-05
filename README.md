@@ -67,15 +67,23 @@ You need a bot to talk to you. It's free and takes 1 minute.
 
 ### 🧪 Test It (30 Seconds)
 
-After setup, try asking your AI agent:
+After setup, try asking your AI agent these **exact phrases**:
 
-- *"Ask me for permission before creating a file called test.txt"*
-- *"Ask for my approval via Momentum before deleting temp.txt"*
-- *"Use the ask_remote_human tool to confirm before renaming this file"*
+```
+"Use the ask_remote_human tool via Momentum to ask if I should create test.txt"
+```
 
-**The key word is "ask"** - your AI needs to know to use Momentum for permission.
+```
+"Call the ask_remote_human MCP tool to get my approval before deleting temp files"
+```
 
-Your phone will buzz with a Telegram notification. Tap the button, select Yes/No, and watch the AI continue instantly!
+```
+"Use Momentum's MCP tool to ask me on Telegram if you should proceed"
+```
+
+**Important:** Say "use the ask_remote_human tool" or "via Momentum" so the AI knows to send to your phone, not just ask you in chat.
+
+Your phone will buzz! Tap the button, choose Yes/No, and watch the AI continue instantly.
 
 ---
 
