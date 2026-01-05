@@ -69,10 +69,11 @@ You need a bot to talk to you. It's free and takes 1 minute.
 
 After setup, try asking your AI agent:
 
-- *"Create a file called test.txt with hello world"*
-- *"Delete all .log files from this project"*
-- *"Rename main.go to app.go"*
-- *"Install the express package"*
+- *"Ask me for permission before creating a file called test.txt"*
+- *"Ask for my approval via Momentum before deleting temp.txt"*
+- *"Use the ask_remote_human tool to confirm before renaming this file"*
+
+**The key word is "ask"** - your AI needs to know to use Momentum for permission.
 
 Your phone will buzz with a Telegram notification. Tap the button, select Yes/No, and watch the AI continue instantly!
 
