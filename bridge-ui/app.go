@@ -77,6 +77,9 @@ func (a *App) startup(ctx context.Context) {
 	
 	// Auto-kill any existing bridge/ngrok processes on startup
 	a.KillExistingBridges()
+	
+	// Check for updates in background (after 3 seconds)
+	a.AutoCheckForUpdates()
 }
 
 // getConfigPath returns the path to the config file

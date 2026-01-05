@@ -11,8 +11,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -200,9 +198,9 @@ del "%%~f0"
 		return fmt.Errorf("failed to launch update script: %v", err)
 	}
 
-	// Quit current app
-	runtime.Quit(a.ctx)
-
+	// App will be closed by the batch script
+	os.Exit(0)
+	
 	return nil
 }
 
@@ -226,8 +224,6 @@ func (a *App) AutoCheckForUpdates() {
 
 // showUpdateNotification shows a tray notification about available update
 func (a *App) showUpdateNotification(version string) {
-	runtime.EventsEmit(a.ctx, "update-available", map[string]string{
-		"version": version,
-		"message": fmt.Sprintf("Momentum v%s is available! Click to update.", version),
-	})
+	// Notification will be handled by system tray menu check
+	// User can manually check for updates via tray menu
 }

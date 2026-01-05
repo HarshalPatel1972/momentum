@@ -3,12 +3,14 @@ package main
 import (
 	"embed"
 	"flag"
+	"fmt"
 
 	"github.com/getlantern/systray"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -78,6 +80,7 @@ func onSystrayReady() {
 
 	// Menu Items
 	mShow := systray.AddMenuItem("Show Momentum", "Show the main window")
+	mCheckUpdate := systray.AddMenuItem("Check for Updates", "Check if a new version is available")
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the application")
 
@@ -88,6 +91,41 @@ func onSystrayReady() {
 			case <-mShow.ClickedCh:
 				if app != nil {
 					app.ShowWindow()
+				}
+			case <-mCheckUpdate.ClickedCh:
+				if app != nil {
+					go func() {
+						version, err := app.CheckForUpdates()
+						if err != nil {
+							runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
+								Type:    runtime.ErrorDialog,
+								Title:   "Update Check Failed",
+								Message: fmt.Sprintf("Could not check for updates: %v", err),
+							})
+						} else if version != "" {
+							result, _ := runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
+								Type:    runtime.InfoDialog,
+								Title:   "Update Available",
+								Message: fmt.Sprintf("Momentum v%s is available!\n\nWould you like to download and install it now?", version),
+								Buttons: []string{"Update Now", "Later"},
+							})
+							if result == "Update Now" {
+								if err := app.DownloadUpdate(version); err != nil {
+									runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
+										Type:    runtime.ErrorDialog,
+										Title:   "Update Failed",
+										Message: fmt.Sprintf("Failed to update: %v", err),
+									})
+								}
+							}
+						} else {
+							runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
+								Type:    runtime.InfoDialog,
+								Title:   "No Updates",
+								Message: "You're running the latest version of Momentum!",
+							})
+						}
+					}()
 				}
 			case <-mQuit.ClickedCh:
 				if app != nil {
