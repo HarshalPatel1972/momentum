@@ -1,13 +1,19 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "momentum",
-  "outputfilename": "momentum",
+  "name": "Momentum",
+  "outputfilename": "Momentum",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "HarshalPatel1972",
-    "email": "hp842484@gmail.com"
+    "name": "Momentum Support",
+    "email": "harshalpatel6828+momentum@gmail.com"
+  },
+  "info": {
+    "productName": "Momentum",
+    "companyName": "Momentum Labs",
+    "productVersion": "1.0.0",
+    "copyright": "© 2026 Momentum Labs"
   }
 }

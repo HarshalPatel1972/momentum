@@ -1,95 +1,60 @@
-# 🚀 Momentum
-
+# Momentum 🚀
 **Keep your AI Agent moving.**
 
-Never return to a stuck agent again. Momentum connects your local AI agents to your mobile device, letting you approve critical decisions from anywhere in the world.
+Momentum acts as a bridge between your AI Agent (Cursor, Windsurf, Copilot) and your phone. When the AI needs permission to delete a file or execute a command, it pings your phone. You tap "Approve," and it continues instantly.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+### 📥 Download
+[**Download Latest Version for Windows**](https://github.com/HarshalPatel1972/momentum/releases/latest)
 
-## The Problem
+---
 
-You're using advanced AI tools like VS Code Copilot, Cursor, or Windsurf to build software. You give the agent a complex task and step away. 
+### ⚡ Quick Start Guide (5 Minutes)
 
-The Agent hits a roadblock:
-> "I need to delete main.go to proceed. Confirm?"
+#### Step 1: Install
+1. Download `Momentum.exe`.
+2. Move it to a folder (e.g., `Documents/Momentum`).
+3. Double-click to run.
+   * *Note: If Windows Defender says "Windows protected your PC", click **More info** → **Run anyway**. (This is normal for new open-source apps).*
 
-The Agent pauses. It waits. You return hours later to find it stuck on step 1, waiting for a simple "Yes."
+#### Step 2: Get Your Free Telegram Keys
+You need a bot to talk to you. It's free and takes 1 minute.
+1. Open Telegram and search for **@BotFather**.
+2. Send the message: `/newbot`
+3. Name it (e.g., `MyAgentBridge_Bot`).
+4. **Copy the API Token** it gives you (looks like `123456:ABC-DEF...`).
+5. Now, search for **@userinfobot** and click Start.
+6. **Copy your Id** (looks like `123456789`).
 
-## The Solution
+#### Step 3: Connect
+1. Open **Momentum**.
+2. Click **Add New Channel**.
+3. Select **Telegram**.
+4. Paste your **Bot Token** and **Chat ID**.
+5. Click **Start Bridge**.
 
-Momentum is a desktop bridge that intercepts agent requests and pushes them to your phone. You tap "Approve" or "Deny" from anywhere, and the Agent immediately resumes work.
-
-### How It Works
-
-1. **Intercept** - Acts as a local MCP (Model Context Protocol) Server
-2. **Tunnel** - Creates secure tunnel via Ngrok (zero router config)
-3. **Notify** - Pushes to Telegram, Ntfy, Discord, or Email
-4. **Relay** - Your tap unblocks the Agent instantly
-
-## Features
-
-✅ **Universal** - Works with any MCP-compatible agent (Claude Desktop, Cursor, Copilot)  
-✅ **Secure** - Data never leaves your machine; only permission requests tunneled  
-✅ **Zero Config** - No complex servers. Just run and scan QR code  
-✅ **Lightweight** - System Tray app using <15MB RAM  
-✅ **Beautiful UI** - Interactive HTML forms for quick decisions  
-✅ **Multi-Channel** - Telegram, WhatsApp, Discord, Email support  
-
-## Installation
-
-### Download Release
-
-Download the latest release for your platform from [Releases](https://github.com/yourusername/momentum/releases).
-
-### From Source
-
-**Prerequisites:**
-- Go 1.21+
-- Node.js 18+
-- Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
-
-**Build:**
-```bash
-git clone https://github.com/yourusername/momentum.git
-cd momentum/bridge-ui
-wails build
-```
-
-## Quick Start
-
-1. **Launch Momentum** - Run the app (it minimizes to System Tray)
-2. **Configure** - Click the System Tray icon → "Configure"
-3. **Add Channel** - Select Telegram/Discord/Email and enter credentials
-4. **Test** - Use the built-in test to verify notifications work
-5. **Connect Agent** - Configure your AI agent to use Momentum's MCP server
-
-### MCP Configuration
-
-Add to your AI agent's MCP config (`.vscode/mcp.json` for VS Code):
-
+#### Step 4: Hook up your Agent
+**For VS Code / Cursor / Windsurf:**
+1. Open your project settings (`.vscode/mcp.json`).
+2. Add this config:
 ```json
 {
   "servers": {
-    "momentum": {
+    "remote-bridge": {
       "type": "stdio",
-      "command": "C:/path/to/momentum.exe",
+      "command": "C:\\Path\\To\\Momentum.exe",
       "args": ["--mcp"]
     }
   }
 }
 ```
+3. **Replace** `C:\\Path\\To\\Momentum.exe` with your actual path.
+4. Restart your AI Agent.
 
-## Usage
+**You're done!** Next time the AI asks a question, your phone will buzz.
 
-When your AI agent needs permission:
+---
 
-1. **Agent Pauses** - Calls `ask_remote_human` tool
-2. **You Get Notified** - Telegram/Discord/Email on your phone
-3. **Tap to Decide** - Opens beautiful form with options
-4. **Agent Resumes** - Gets your answer immediately
-
-## Architecture
+## How It Works
 
 ```
 AI Agent (VS Code)
@@ -100,46 +65,42 @@ Momentum (--mcp mode)
     ↓
 Ngrok Tunnel (HTTPS)
     ↓
-Notification Channel (Telegram/Discord/etc)
+Telegram Bot
     ↓
-Your Phone (Interactive HTML form)
+Your Phone (Interactive form)
     ↓
 Response back to Agent
 ```
 
-## Tech Stack
+---
 
-- **Backend**: Go, Wails v2
-- **Frontend**: React, TypeScript, Vite
-- **Networking**: Ngrok
-- **Protocols**: MCP (Model Context Protocol)
-- **Notifications**: Telegram Bot API, CallMeBot, Discord Webhooks
+## Features
 
-## Development
+✅ **Universal** - Works with any MCP-compatible agent  
+✅ **Secure** - Data never leaves your machine  
+✅ **Zero Config** - No complex servers  
+✅ **Lightweight** - Uses <15MB RAM  
+✅ **Beautiful UI** - Interactive HTML forms  
+✅ **Multi-Channel** - Telegram, WhatsApp, Discord support  
 
-**Run in Dev Mode:**
-```bash
-cd bridge-ui
-wails dev
-```
+---
 
-**Run MCP Server:**
-```bash
-./momentum.exe --mcp
-```
+## Troubleshooting
 
-**Project Structure:**
-```
-momentum/
-├── bridge-ui/           # Wails desktop app
-│   ├── frontend/        # React UI
-│   ├── bridge.go        # Bridge service
-│   ├── mcp_server.go    # MCP stdio server
-│   └── app.go           # Wails app logic
-├── main.go              # Standalone CLI version
-├── notifications.go     # Notification channels
-└── .vscode/mcp.json     # MCP configuration
-```
+**Windows says "Windows protected your PC"**
+- This is normal for new apps. Click "More info" → "Run anyway"
+
+**Not getting Telegram notifications?**
+- Make sure you've started a chat with your bot
+- Send any message to your bot first (e.g., `/start`)
+- Verify your Chat ID is correct
+
+**Agent doesn't connect via MCP?**
+- Check the path in mcp.json is correct
+- Use double backslashes in Windows paths (`C:\\Path\\To\\Momentum.exe`)
+- Restart your IDE after adding the MCP config
+
+---
 
 ## Contributing
 
@@ -151,18 +112,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📧 Email: support@momentum.dev
-- 💬 Discord: [Join Server](https://discord.gg/momentum)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/momentum/issues)
-
-## Roadmap
-
-- [ ] macOS and Linux builds
-- [ ] Additional notification channels (Slack, SMS)
-- [ ] QR code quick setup
-- [ ] Request history and analytics
-- [ ] Multi-device support
-- [ ] Custom approval workflows
+- 📧 Email: harshalpatel6828+momentum@gmail.com
+- 🐛 Issues: [GitHub Issues](https://github.com/HarshalPatel1972/momentum/issues)
 
 ---
 
