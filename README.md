@@ -34,23 +34,35 @@ You need a bot to talk to you. It's free and takes 1 minute.
 
 #### Step 4: Hook up your Agent
 **For VS Code / Cursor / Windsurf:**
-1. Open your project settings (`.vscode/mcp.json`).
-2. Add this config:
+
+1. **Create the config file** (if it doesn't exist):
+   - In your AI workspace, create a folder: `.vscode` 
+   - Inside it, create a file: `mcp.json`
+   - Full path will be: `YourProject/.vscode/mcp.json`
+
+2. **Add this config**:
 ```json
 {
   "servers": {
     "remote-bridge": {
       "type": "stdio",
-      "command": "C:\\Path\\To\\Momentum.exe",
+      "command": "REPLACE_WITH_YOUR_PATH_TO_MOMENTUM.exe",
       "args": ["--mcp"]
     }
   }
 }
 ```
-3. **Replace** `C:\\Path\\To\\Momentum.exe` with your actual path.
-4. Restart your AI Agent.
+
+3. **Replace the path**:
+   - Right-click `Momentum.exe` → **"Copy as path"**
+   - Replace `REPLACE_WITH_YOUR_PATH_TO_MOMENTUM.exe` with the copied path
+   - Example: `"C:\\Users\\YourName\\Documents\\Momentum\\Momentum.exe"`
+   - **Important**: Use double backslashes `\\` in Windows paths
+
+4. **Restart your AI Agent** (VS Code/Cursor/Windsurf)
 
 **You're done!** Next time the AI asks a question, your phone will buzz.
+
 
 ---
 
