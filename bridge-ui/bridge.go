@@ -285,15 +285,22 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 
 	responseURL := fmt.Sprintf("%s/respond?id=%s", publicURL, requestID)
 
-	// [FIX] Add the link to the TEXT as well (Backup if button fails)
-	message := fmt.Sprintf("🤖 *Agent Paused*\n\n❓ %s\n\n🔗 [Open Control Panel](%s)", question, responseURL)
+	// Use HTML formatting for better rendering
+	msgText := fmt.Sprintf(
+		"<b>🤖 Input Needed</b>\n\n"+
+			"%s\n\n"+
+			"<a href=\"%s\">📲 Launch Interface</a>",
+		question,
+		responseURL,
+	)
 
-	msg := tgbotapi.NewMessage(chatID, message)
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(chatID, msgText)
+	msg.ParseMode = "HTML" // Use HTML instead of Markdown
 
+	// Add inline keyboard button
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("👉 Tap to Decide", responseURL),
+			tgbotapi.NewInlineKeyboardButtonURL("Tap to Respond", responseURL),
 		),
 	)
 	msg.ReplyMarkup = keyboard
