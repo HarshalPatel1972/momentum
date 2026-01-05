@@ -4,17 +4,33 @@
 Momentum acts as a bridge between your AI Agent (Cursor, Windsurf, Copilot) and your phone. When the AI needs permission to delete a file or execute a command, it pings your phone. You tap "Approve," and it continues instantly.
 
 ### 📥 Download
-[**Download Latest Version for Windows**](https://github.com/HarshalPatel1972/momentum/releases/latest)
+
+**🎯 Recommended: Installer (Easy Setup)**
+- [Download MomentumSetup.exe](https://github.com/HarshalPatel1972/momentum/releases/latest/download/MomentumSetup.exe)
+- Automatic installation with shortcuts
+- Built-in auto-updates
+
+**💼 Portable Version (Advanced Users)**
+- [Download Momentum.exe](https://github.com/HarshalPatel1972/momentum/releases/latest/download/Momentum.exe)
+- No installation required
+- Manual updates
 
 ---
 
 ### ⚡ Quick Start Guide (5 Minutes)
 
 #### Step 1: Install
-1. Download `Momentum.exe`.
-2. Move it to a folder (e.g., `Documents/Momentum`).
-3. Double-click to run.
-   * *Note: If Windows Defender says "Windows protected your PC", click **More info** → **Run anyway**. (This is normal for new open-source apps).*
+
+**If you downloaded MomentumSetup.exe (Installer):**
+1. Double-click `MomentumSetup.exe`
+2. Follow the installation wizard
+3. Launch from Start Menu or Desktop shortcut
+   * *Note: If Windows Defender says "Windows protected your PC", click **More info** → **Run anyway**.*
+
+**If you downloaded Momentum.exe (Portable):**
+1. Move `Momentum.exe` to a folder (e.g., `Documents/Momentum`)
+2. Double-click to run
+   * *Note: If Windows Defender says "Windows protected your PC", click **More info** → **Run anyway**.*
 
 #### Step 2: Get Your Free Telegram Keys
 You need a bot to talk to you. It's free and takes 1 minute.
