@@ -63,6 +63,18 @@ You need a bot to talk to you. It's free and takes 1 minute.
 
 **You're done!** Next time the AI asks a question, your phone will buzz.
 
+---
+
+### 🧪 Test It (30 Seconds)
+
+After setup, try asking your AI agent:
+
+- *"Create a file called test.txt with hello world"*
+- *"Delete all .log files from this project"*
+- *"Rename main.go to app.go"*
+- *"Install the express package"*
+
+Your phone will buzz with a Telegram notification. Tap the button, select Yes/No, and watch the AI continue instantly!
 
 ---
 
