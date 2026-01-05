@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Square, ExternalLink, Copy, Check } from 'lucide-react';
+import { Square, ExternalLink, Copy, Check, ArrowLeft } from 'lucide-react';
 import { StopBridge, StartBridge } from "../../wailsjs/go/main/App";
 import { EventsOn } from "../../wailsjs/runtime";
 
 interface BridgeControlProps {
     onStop: () => void;
+    onBack?: () => void;
 }
 
-export default function BridgeControl({ onStop }: BridgeControlProps) {
+export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
     const [logs, setLogs] = useState<string[]>([]);
     const [publicURL, setPublicURL] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
@@ -60,6 +61,12 @@ export default function BridgeControl({ onStop }: BridgeControlProps) {
         }, 500);
     };
 
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        }
+    };
+
     const copyURL = () => {
         if (publicURL) {
             navigator.clipboard.writeText(publicURL);
@@ -75,10 +82,17 @@ export default function BridgeControl({ onStop }: BridgeControlProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
         >
+            {/* Back Button */}
+            {onBack && (
+                <button className="back-btn" onClick={handleBack} title="Back">
+                    <ArrowLeft size={20} />
+                </button>
+            )}
+
             <div className="bridge-control-header">
                 <div className="status-section">
                     <div className="status-indicator active" />
-                    <span className="status-text">Bridge Active</span>
+                    <span className="status-text">🚀 Bridge Running</span>
                 </div>
                 
                 {publicURL && (

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -54,6 +56,14 @@ type SMSConfig struct {
 	To          string `json:"to"`
 }
 
+// RecentChannel represents a recently configured channel
+type RecentChannel struct {
+	Name      string `json:"name"`       // "Telegram", "Discord", etc.
+	Icon      string `json:"icon"`       // Emoji or icon identifier
+	ConfigKey string `json:"config_key"` // For quick lookup ("telegram", "whatsapp", etc.)
+	LastUsed  string `json:"last_used"`  // ISO timestamp
+}
+
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{
@@ -64,6 +74,9 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.bridge.SetContext(ctx)
+	
+	// Auto-kill any existing bridge/ngrok processes on startup
+	a.KillExistingBridges()
 }
 
 // getConfigPath returns the path to the config file
@@ -108,6 +121,9 @@ func (a *App) QuitApp() {
 
 // StartBridge loads config and starts the bridge service
 func (a *App) StartBridge() string {
+	// Kill any existing bridge/ngrok processes first
+	a.KillExistingBridges()
+	
 	configPath := a.getConfigPath()
 
 	data, err := ioutil.ReadFile(configPath)
@@ -129,6 +145,14 @@ func (a *App) StartBridge() string {
 	}
 
 	return "Bridge started successfully"
+}
+
+// KillExistingBridges stops any running bridge or ngrok processes
+func (a *App) KillExistingBridges() {
+	// This will be implemented differently on Windows vs Unix
+	// For Windows, we use PowerShell to kill processes
+	// Note: This only kills OTHER processes, not the current app
+	exec.Command("powershell", "-Command", "Get-Process | Where-Object {$_.ProcessName -match 'bridge|ngrok' -and $_.Id -ne $PID} | Stop-Process -Force").Run()
 }
 
 // StopBridge stops the bridge service
@@ -192,4 +216,69 @@ func (a *App) ReadLogs() []string {
 		return lines[len(lines)-50:]
 	}
 	return lines
+}
+
+// getRecentsPath returns the path to the recents file
+func (a *App) getRecentsPath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "recents.json"
+	}
+	exeDir := filepath.Dir(exePath)
+	return filepath.Join(exeDir, "recents.json")
+}
+
+// GetRecentChannels returns recently configured channels
+func (a *App) GetRecentChannels() []RecentChannel {
+	data, err := ioutil.ReadFile(a.getRecentsPath())
+	if err != nil {
+		return []RecentChannel{}
+	}
+
+	var recents []RecentChannel
+	if err := json.Unmarshal(data, &recents); err != nil {
+		return []RecentChannel{}
+	}
+
+	// Return max 5 most recent
+	if len(recents) > 5 {
+		return recents[:5]
+	}
+	return recents
+}
+
+// AddRecentChannel adds a channel to recents (or updates if exists)
+func (a *App) AddRecentChannel(name, icon, configKey string) error {
+	recents := a.GetRecentChannels()
+	
+	// Check if already exists, remove if so
+	var filtered []RecentChannel
+	for _, r := range recents {
+		if r.ConfigKey != configKey {
+			filtered = append(filtered, r)
+		}
+	}
+	
+	// Add new recent at the beginning
+	newRecent := RecentChannel{
+		Name:      name,
+		Icon:      icon,
+		ConfigKey: configKey,
+		LastUsed:  time.Now().Format(time.RFC3339),
+	}
+	
+	recents = append([]RecentChannel{newRecent}, filtered...)
+	
+	// Keep max 5
+	if len(recents) > 5 {
+		recents = recents[:5]
+	}
+	
+	// Save to file
+	data, err := json.MarshalIndent(recents, "", "  ")
+	if err != nil {
+		return err
+	}
+	
+	return ioutil.WriteFile(a.getRecentsPath(), data, 0644)
 }

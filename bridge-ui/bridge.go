@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -226,6 +227,25 @@ func (b *BridgeService) handleAskHuman(request mcp.CallToolRequest) (*mcp.CallTo
 	return mcp.NewToolResultText(response), nil
 }
 
+// getPublicURL returns the public tunnel URL from memory or file
+func (b *BridgeService) getPublicURL() string {
+	// A. If we are the Main UI, we have it in memory
+	b.mu.Lock()
+	if b.publicURL != "" {
+		b.mu.Unlock()
+		return b.publicURL
+	}
+	b.mu.Unlock()
+
+	// B. If we are the MCP Process (VS Code), read it from the file
+	data, err := ioutil.ReadFile("bridge-ui/tunnel-url.txt")
+	if err == nil {
+		return strings.TrimSpace(string(data))
+	}
+
+	return "" // Failed to find URL
+}
+
 // sendNotification sends the question to configured channels
 func (b *BridgeService) sendNotification(question string, options []string, requestID string) {
 	switch b.cfg.Channel {
@@ -245,6 +265,13 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 		return
 	}
 
+	// [FIX] Get URL from memory OR file
+	publicURL := b.getPublicURL()
+	if publicURL == "" {
+		b.log("❌ Error: Could not find Bridge Public URL. Is the UI running?")
+		return
+	}
+
 	b.log("📤 Sending Telegram notification...")
 
 	bot, err := tgbotapi.NewBotAPI(b.cfg.Telegram.BotToken)
@@ -253,21 +280,23 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 		return
 	}
 
-	// Parse chat ID
 	var chatID int64
 	fmt.Sscanf(b.cfg.Telegram.ChatID, "%d", &chatID)
 
-	// Build message with individual clickable links for each option
-	message := fmt.Sprintf("🤖 *Agent Paused*\n\n❓ %s\n\n👇 *Choose an option:*\n", question)
-	
-	// Single "Tap to Decide" link (no answer in URL)
-	responseURL := fmt.Sprintf("%s/respond?id=%s", b.publicURL, requestID)
-	message += fmt.Sprintf("\n\n👉 [Tap to Decide](%s)", responseURL)
+	responseURL := fmt.Sprintf("%s/respond?id=%s", publicURL, requestID)
 
-	b.log(fmt.Sprintf("🔗 Base URL: %s/respond?id=%s", b.publicURL, requestID))
+	// [FIX] Add the link to the TEXT as well (Backup if button fails)
+	message := fmt.Sprintf("🤖 *Agent Paused*\n\n❓ %s\n\n� [Open Control Panel](%s)", question, responseURL)
 
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = "Markdown"
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("👉 Tap to Decide", responseURL),
+		),
+	)
+	msg.ReplyMarkup = keyboard
 
 	if _, err := bot.Send(msg); err != nil {
 		b.log(fmt.Sprintf("❌ Telegram Send Error: %v", err))

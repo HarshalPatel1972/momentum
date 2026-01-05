@@ -115,11 +115,138 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 20px var(--accent-glow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .start-btn:hover {
   box-shadow: 0 8px 40px var(--accent-glow);
   transform: translateY(-2px);
+}
+
+/* Recents Section */
+.recents-section {
+  width: 100%;
+  max-width: 500px;
+  margin: 32px 0 24px 0;
+}
+
+.recents-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.recents-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  backdrop-filter: blur(10px);
+}
+
+.recent-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--accent-glow);
+}
+
+.recent-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+}
+
+.recent-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.recent-time {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Bridge Status Button */
+.bridge-status-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(6, 214, 160, 0.15) 0%, rgba(17, 153, 142, 0.15) 100%);
+  border: 1px solid rgba(6, 214, 160, 0.3);
+  border-radius: 12px;
+  margin: 32px 0 24px 0;
+  max-width: 500px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bridge-status-btn:hover {
+  background: linear-gradient(135deg, rgba(6, 214, 160, 0.25) 0%, rgba(17, 153, 142, 0.25) 100%);
+  border-color: rgba(6, 214, 160, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(6, 214, 160, 0.3);
+}
+
+.bridge-status-btn .pulse {
+  color: #06d6a0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.bridge-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  flex-grow: 1;
+}
+
+.status-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
 /* Source Select Screen */

@@ -14,8 +14,10 @@ type Channel = 'telegram' | 'whatsapp' | 'gmail' | 'sms';
 
 function App() {
     const [currentView, setCurrentView] = useState<View>('welcome');
+    const [prevView, setPrevView] = useState<View>('welcome'); // Track previous view
     const [selectedSource, setSelectedSource] = useState<'agent' | 'mcp'>('agent');
     const [selectedChannel, setSelectedChannel] = useState<Channel>('telegram');
+    const [editingRecent, setEditingRecent] = useState(false);
 
     const handleStart = () => {
         setCurrentView('source-select');
@@ -40,11 +42,25 @@ function App() {
     };
 
     const handleConfigComplete = () => {
+        setPrevView(currentView);
         setCurrentView('bridge-control');
     };
 
     const handleBridgeStop = () => {
+        setPrevView(currentView);
         setCurrentView('welcome');
+    };
+
+    const handleBridgeBack = () => {
+        // Go back to previous view (config page)
+        setCurrentView(prevView);
+    };
+
+    const handleRecentSelect = (channel: any) => {
+        // Map config_key to Channel type
+        setSelectedChannel(channel.config_key as Channel);
+        setEditingRecent(true);
+        setCurrentView('config');
     };
 
     return (
@@ -54,7 +70,9 @@ function App() {
                     <WelcomeScreen 
                         key="welcome"
                         onStart={handleStart} 
-                        onSettings={handleSettings} 
+                        onSettings={handleSettings}
+                        onRecentSelect={handleRecentSelect}
+                        onViewBridge={() => setCurrentView('bridge-control')}
                     />
                 )}
                 {currentView === 'source-select' && (
@@ -91,6 +109,7 @@ function App() {
                     <BridgeControl
                         key="control"
                         onStop={handleBridgeStop}
+                        onBack={handleBridgeBack}
                     />
                 )}
             </AnimatePresence>

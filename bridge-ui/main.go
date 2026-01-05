@@ -15,6 +15,8 @@ import (
 var assets embed.FS
 
 //go:embed build/windows/icon.ico
+var icon []byte
+
 var app *App
 
 func main() {
@@ -41,7 +43,7 @@ func runWailsUI() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "Remote Bridge",
+		Title:     "Momentum",
 		Width:     1100,
 		Height:    700,
 		MinWidth:  900,
@@ -71,11 +73,11 @@ func runWailsUI() {
 
 func onSystrayReady() {
 	systray.SetIcon(icon)
-	systray.SetTitle("Remote Bridge")
-	systray.SetTooltip("Remote Bridge - Running in background")
+	systray.SetTitle("Momentum")
+	systray.SetTooltip("Momentum - Keep your AI Agent moving")
 
 	// Menu Items
-	mShow := systray.AddMenuItem("Show Bridge", "Show the main window")
+	mShow := systray.AddMenuItem("Show Momentum", "Show the main window")
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the application")
 
