@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -238,6 +240,16 @@ func (b *BridgeService) handleAskHuman(request mcp.CallToolRequest) (*mcp.CallTo
 	return mcp.NewToolResultText(response), nil
 }
 
+// getTunnelFilePath returns the path to tunnel-url.txt relative to executable
+func getTunnelFilePath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		// Fallback for dev mode
+		return "tunnel-url.txt"
+	}
+	return filepath.Join(filepath.Dir(exePath), "tunnel-url.txt")
+}
+
 // getPublicURL returns the public tunnel URL from memory or file
 func (b *BridgeService) getPublicURL() string {
 	// A. If we are the Main UI, we have it in memory
@@ -249,7 +261,8 @@ func (b *BridgeService) getPublicURL() string {
 	b.mu.Unlock()
 
 	// B. If we are the MCP Process (VS Code), read it from the file
-	data, err := ioutil.ReadFile("bridge-ui/tunnel-url.txt")
+	tunnelPath := getTunnelFilePath()
+	data, err := ioutil.ReadFile(tunnelPath)
 	if err == nil {
 		return strings.TrimSpace(string(data))
 	}
@@ -357,7 +370,8 @@ func (b *BridgeService) runHTTPServer(ctx context.Context, tunnel ngrok.Tunnel) 
 	mux := http.NewServeMux()
 
 	// Save tunnel URL to file for MCP adapter
-	ioutil.WriteFile("tunnel-url.txt", []byte(b.publicURL), 0644)
+	tunnelPath := getTunnelFilePath()
+	ioutil.WriteFile(tunnelPath, []byte(b.publicURL), 0644)
 
 	mux.HandleFunc("/respond", func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.URL.Query().Get("id")
