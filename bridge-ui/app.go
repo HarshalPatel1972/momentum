@@ -94,8 +94,11 @@ func (a *App) getConfigPath() string {
 // beforeClose is called when the user clicks the window's X button.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	if a.wantsToQuit {
+		// Actually quitting - stop the bridge
+		a.StopBridge()
 		return false
 	}
+	// Just minimizing to tray
 	runtime.WindowHide(ctx)
 	return true
 }

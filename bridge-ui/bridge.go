@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"strings"
 	"sync"
 
@@ -16,7 +17,7 @@ import (
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
 // BridgeService manages the MCP server and Ngrok tunnel
@@ -144,6 +145,10 @@ func (b *BridgeService) Stop() {
 	if b.tunnel != nil {
 		b.tunnel.CloseWithContext(context.Background())
 	}
+
+	// Kill any lingering ngrok processes
+	exec.Command("powershell", "-Command",
+		"Get-Process | Where-Object {$_.ProcessName -eq 'ngrok'} | Stop-Process -Force").Run()
 
 	b.running = false
 	b.log("✅ Bridge Stopped")
@@ -292,7 +297,7 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 		"<b>🤖 Input Needed</b>\n\n"+
 			"%s\n\n"+
 			"I've hit a decision point and need your guidance to continue.\n\n"+
-			"<a href=\"%s\">📲 Launch Interface</a>",
+			"<a href='%s'>📲 Launch Interface</a>",
 		question,
 		responseURL,
 	)
