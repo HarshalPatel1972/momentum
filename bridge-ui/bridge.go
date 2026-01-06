@@ -127,8 +127,9 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 		runtime.EventsEmit(b.ctx, "publicURL", b.publicURL)
 	}
 
-	// Start HTTP handler for responses (NOTE: MCP stdio server only runs with --mcp flag)
-	go b.runHTTPServer(ctx, tunnel)
+	// Start HTTP handler - this BLOCKS to keep tunnel alive!
+	// DO NOT use 'go' keyword here or tunnel will die immediately
+	b.runHTTPServer(ctx, tunnel)
 
 	return nil
 }
