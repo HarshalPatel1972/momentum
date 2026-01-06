@@ -14,15 +14,12 @@ export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
     const [publicURL, setPublicURL] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [stopping, setStopping] = useState(false);
+    const [bridgeStarted, setBridgeStarted] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Start the bridge when component mounts
-        StartBridge().then((result) => {
-            if (result.includes('Error')) {
-                setLogs(prev => [...prev, `❌ ${result}`]);
-            }
-        });
+        // DO NOT auto-start - let user click Start button for control
+        
 
         // Listen for log events
         const unsubLog = EventsOn("log", (message: string) => {
@@ -75,6 +72,15 @@ export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
         }
     };
 
+    const handleStart = () => {
+        setBridgeStarted(true);
+        StartBridge().then((result) => {
+            if (result.includes("Error")) {
+                setLogs(prev => [...prev, `❌ ${result}`]);
+            }
+        });
+    };
+
     return (
         <motion.div 
             className="bridge-control"
@@ -89,45 +95,62 @@ export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
                 </button>
             )}
 
-            <div className="bridge-control-header">
-                <div className="status-section">
-                    <div className="status-indicator active" />
-                    <span className="status-text">🚀 Bridge Running</span>
-                </div>
-                
-                {publicURL && (
-                    <div className="url-badge" onClick={copyURL}>
-                        <ExternalLink size={14} />
-                        <span>{publicURL}</span>
-                        {copied ? <Check size={14} /> : <Copy size={14} />}
+            {!bridgeStarted ? (
+                <div className="bridge-start-view">
+                    <div className="start-prompt">
+                        <h2>Ready to Start</h2>
+                        <p>Click the button below to start the bridge and begin receiving notifications.</p>
                     </div>
-                )}
-            </div>
-
-            <div className="console">
-                <div className="console-header">
-                    <span>Live Logs</span>
-                    <span className="log-count">{logs.length} entries</span>
+                    <button 
+                        className="start-bridge-btn"
+                        onClick={handleStart}
+                    >
+                        Start Bridge
+                    </button>
                 </div>
-                <div className="console-body">
-                    {logs.map((log, i) => (
-                        <div key={i} className="log-line">
-                            <span className="log-time">{new Date().toLocaleTimeString()}</span>
-                            <span className="log-message">{log}</span>
+            ) : (
+                <>
+                    <div className="bridge-control-header">
+                        <div className="status-section">
+                            <div className="status-indicator active" />
+                            <span className="status-text">🚀 Bridge Running</span>
                         </div>
-                    ))}
-                    <div ref={logEndRef} />
-                </div>
-            </div>
+                        
+                        {publicURL && (
+                            <div className="url-badge" onClick={copyURL}>
+                                <ExternalLink size={14} />
+                                <span>{publicURL}</span>
+                                {copied ? <Check size={14} /> : <Copy size={14} />}
+                            </div>
+                        )}
+                    </div>
 
-            <button 
-                className="stop-btn"
-                onClick={handleStop}
-                disabled={stopping}
-            >
-                <Square size={18} />
-                {stopping ? 'Stopping...' : 'Stop Bridge'}
-            </button>
+                    <div className="console">
+                        <div className="console-header">
+                            <span>Live Logs</span>
+                            <span className="log-count">{logs.length} entries</span>
+                        </div>
+                        <div className="console-body">
+                            {logs.map((log, i) => (
+                                <div key={i} className="log-line">
+                                    <span className="log-time">{new Date().toLocaleTimeString()}</span>
+                                    <span className="log-message">{log}</span>
+                                </div>
+                            ))}
+                            <div ref={logEndRef} />
+                        </div>
+                    </div>
+
+                    <button 
+                        className="stop-btn"
+                        onClick={handleStop}
+                        disabled={stopping}
+                    >
+                        <Square size={18} />
+                        {stopping ? 'Stopping...' : 'Stop Bridge'}
+                    </button>
+                </>
+            )}
         </motion.div>
     );
 }

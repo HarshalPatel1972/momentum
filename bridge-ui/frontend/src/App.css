@@ -274,6 +274,7 @@ body {
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  z-index: 10; /* Ensure back button appears above other elements */
 }
 
 .back-btn:hover {
@@ -728,6 +729,57 @@ body {
   flex-direction: column;
   padding: 24px;
 }
+
+/* Bridge Start View (before bridge is started) */
+.bridge-start-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+}
+
+.start-prompt {
+  text-align: center;
+  max-width: 400px;
+}
+
+.start-prompt h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.start-prompt p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.start-bridge-btn {
+  padding: 16px 48px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.start-bridge-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px var(--accent-glow);
+}
+
+.start-bridge-btn:active {
+  transform: translateY(0);
+}
+
 
 .bridge-control-header {
   display: flex;
