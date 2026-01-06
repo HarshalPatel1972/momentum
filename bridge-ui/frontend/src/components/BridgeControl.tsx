@@ -20,7 +20,8 @@ export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
         // Start bridge when component mounts (user just completed config)
         StartBridge().then((result) => {
             if (result.includes('Error')) {
-                setLogs(prev => [...prev, `❌ ${result}`]);
+                setLogs(prev => [...prev, `❌ BRIDGE START FAILED: ${result}`]);
+                console.error("Bridge failed to start:", result);
             }
         });
 

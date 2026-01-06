@@ -93,10 +93,7 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	b.cancel = cancel
 
-	b.log("🚀 Starting Remote Bridge...")
-	b.log("📡 Initializing Ngrok tunnel...")
-
-	// Start Ngrok tunnel
+	// Start Ngrok tunnel (DON'T log success yet - ngrok might fail!)
 	tunnel, err := ngrok.Listen(ctx,
 		config.HTTPEndpoint(),
 		ngrok.WithAuthtoken(cfg.NgrokToken),
@@ -105,13 +102,18 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 		b.mu.Lock()
 		b.running = false
 		b.mu.Unlock()
-		b.log(fmt.Sprintf("❌ Ngrok Error: %v", err))
-		return err
+		errMsg := fmt.Sprintf("Failed to start ngrok: %v", err)
+		b.log("❌ " + errMsg)
+		return fmt.Errorf(errMsg)
 	}
 
+	// SUCCESS - ngrok started! Now we can log
 	b.tunnel = tunnel
 	b.publicURL = tunnel.URL()
+	
+	b.log("🚀 Starting Remote Bridge...")
 	b.log(fmt.Sprintf("✅ Tunnel Live: %s", b.publicURL))
+	b.log("🌐 HTTP Server listening on tunnel...")
 
 	// Emit public URL event (only in UI mode)
 	if b.ctx != nil && b.ctx != context.Background() {
