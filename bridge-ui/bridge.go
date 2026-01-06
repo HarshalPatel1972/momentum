@@ -320,13 +320,15 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 
 	responseURL := fmt.Sprintf("%s/respond?id=%s", publicURL, requestID)
 
-	// Use exact template user provided
+	// Use exact template user provided with double quotes for attributes
 	msgText := fmt.Sprintf(
 		"<b>🤖 Input Needed</b>\n\n"+
 			"%s\n\n"+
 			"I've hit a decision point and need your guidance to continue.\n\n"+
-			"<a href='%s'>📲 Launch Interface</a>",
+			"<a href=\"%s\">📲 Launch Interface</a>\n\n"+
+			"Link: %s",
 		question,
+		responseURL,
 		responseURL,
 	)
 
