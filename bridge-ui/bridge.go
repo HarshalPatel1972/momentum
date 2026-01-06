@@ -94,6 +94,10 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	b.cancel = cancel
 
+	// Log that we're ATTEMPTING to start (not success yet)
+	b.log("🔄 Attempting to start ngrok tunnel...")
+	b.log(fmt.Sprintf("📝 Using auth token: %s...", cfg.NgrokToken[:10]))
+
 	// Start Ngrok tunnel (DON'T log success yet - ngrok might fail!)
 	tunnel, err := ngrok.Listen(ctx,
 		config.HTTPEndpoint(),
