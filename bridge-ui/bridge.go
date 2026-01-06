@@ -285,17 +285,18 @@ func (b *BridgeService) sendTelegram(question string, options []string, requestI
 
 	responseURL := fmt.Sprintf("%s/respond?id=%s", publicURL, requestID)
 
-	// Use HTML formatting for better rendering
+	// Use exact template user provided
 	msgText := fmt.Sprintf(
 		"<b>🤖 Input Needed</b>\n\n"+
 			"%s\n\n"+
+			"I've hit a decision point and need your guidance to continue.\n\n"+
 			"<a href=\"%s\">📲 Launch Interface</a>",
 		question,
 		responseURL,
 	)
 
 	msg := tgbotapi.NewMessage(chatID, msgText)
-	msg.ParseMode = "HTML" // Use HTML instead of Markdown
+	msg.ParseMode = "HTML"
 
 	// Add inline keyboard button
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
