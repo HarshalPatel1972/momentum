@@ -17,8 +17,13 @@ export default function BridgeControl({ onStop, onBack }: BridgeControlProps) {
     const logEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // DO NOT auto-start - let user click Start button for control
-        
+        // Start bridge when component mounts (user just completed config)
+        StartBridge().then((result) => {
+            if (result.includes('Error')) {
+                setLogs(prev => [...prev, `❌ ${result}`]);
+            }
+        });
+
 
         // Listen for log events
         const unsubLog = EventsOn("log", (message: string) => {
