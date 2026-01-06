@@ -240,14 +240,23 @@ func (b *BridgeService) handleAskHuman(request mcp.CallToolRequest) (*mcp.CallTo
 	return mcp.NewToolResultText(response), nil
 }
 
-// getTunnelFilePath returns the path to tunnel-url.txt relative to executable
+// getTunnelFilePath returns the path to tunnel-url.txt, checking both dev and production locations
 func getTunnelFilePath() string {
-	exePath, err := os.Executable()
-	if err != nil {
-		// Fallback for dev mode
-		return "tunnel-url.txt"
+	// Try dev mode path first (relative to project root)
+	devPath := "tunnel-url.txt"
+	if _, err := os.Stat(devPath); err == nil {
+		return devPath
 	}
-	return filepath.Join(filepath.Dir(exePath), "tunnel-url.txt")
+	
+	// Try production path (relative to executable)
+	exePath, err := os.Executable()
+	if err == nil {
+		prodPath := filepath.Join(filepath.Dir(exePath), "tunnel-url.txt")
+		return prodPath
+	}
+	
+	// Fallback
+	return "tunnel-url.txt"
 }
 
 // getPublicURL returns the public tunnel URL from memory or file
