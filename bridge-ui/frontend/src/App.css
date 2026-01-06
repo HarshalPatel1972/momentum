@@ -788,6 +788,7 @@ body {
   margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
+  padding-left: 50px; /* Space for back button */
 }
 
 .status-section {
