@@ -86,6 +86,7 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 	b.mu.Lock()
 	if b.running {
 		b.mu.Unlock()
+		b.log("⚠️ Bridge is already running!")
 		return fmt.Errorf("bridge is already running")
 	}
 	b.cfg = cfg
@@ -127,9 +128,9 @@ func (b *BridgeService) Start(cfg BridgeConfig) error {
 		runtime.EventsEmit(b.ctx, "publicURL", b.publicURL)
 	}
 
-	// Start HTTP handler - this BLOCKS to keep tunnel alive!
-	// DO NOT use 'go' keyword here or tunnel will die immediately
-	b.runHTTPServer(ctx, tunnel)
+	// Start HTTP handler as goroutine
+	// Tunnel stays alive because it's stored in b.tunnel
+	go b.runHTTPServer(ctx, tunnel)
 
 	return nil
 }
