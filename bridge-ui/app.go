@@ -127,8 +127,8 @@ func (a *App) QuitApp() {
 
 // StartBridge loads config and starts the bridge service
 func (a *App) StartBridge() string {
-	// Kill any existing bridge/ngrok processes first
-	a.KillExistingBridges()
+	// Stop() now properly kills ngrok, so we don't need to kill here
+	// Killing before start was causing race conditions
 	
 	configPath := a.getConfigPath()
 
