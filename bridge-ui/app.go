@@ -83,6 +83,16 @@ func (a *App) HideWindow() {
 	runtime.WindowHide(a.ctx)
 }
 
+// MarkIntroSeen records that this version's welcome story has been shown.
+func (a *App) MarkIntroSeen() {
+	cfg, _ := loadConfig()
+	if cfg.IntroSeen == majorVersion(Version) {
+		return
+	}
+	cfg.IntroSeen = majorVersion(Version)
+	saveConfig(cfg)
+}
+
 // StartsMini reports whether the app was launched with --mini.
 func (a *App) StartsMini() bool { return a.startMini }
 
@@ -125,6 +135,7 @@ type AppState struct {
 	Running     bool   `json:"running"`
 	AtDesk      bool   `json:"atDesk"`
 	PopUp       bool   `json:"popUp"`
+	ShowIntro   bool   `json:"showIntro"` // set up, but hasn't seen this major version's story
 	IDEsLinked  int    `json:"idesLinked"`
 	IDEsFound   int    `json:"idesFound"`
 	DataDir     string `json:"dataDir"`
@@ -145,6 +156,7 @@ func (a *App) GetState() AppState {
 		Running:     a.IsBridgeRunning(),
 		AtDesk:      cfg.AtDesk,
 		PopUp:       !cfg.NoPopUp,
+		ShowIntro:   needsIntro(cfg),
 		DataDir:     dataDir(),
 	}
 	st.Configured = st.Problem == ""

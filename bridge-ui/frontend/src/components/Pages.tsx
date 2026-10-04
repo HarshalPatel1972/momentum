@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Bug, Check, FolderOpen, Github, Heart, Power, Scale, ScrollText, Share2, Trash2 } from 'lucide-react';
+import { BookOpen, Bug, Check, FolderOpen, Github, Heart, Play, Power, Scale, ScrollText, Share2, Trash2 } from 'lucide-react';
 import { Activity, api, AppState, Logo, REPO_URL, Slide } from '../lib';
 import Tape from './Tape';
 import IdeList from './IdeList';
@@ -123,7 +123,7 @@ export function SettingsPage({ state, refresh, toast }: { state: AppState; refre
     );
 }
 
-export function AboutPage({ state, toast }: { state: AppState; toast: (m: string) => void }) {
+export function AboutPage({ state, toast, onReplay }: { state: AppState; toast: (m: string) => void; onReplay: () => void }) {
     const [copied, setCopied] = useState(false);
     const share = () => {
         navigator.clipboard.writeText(`Momentum: a pager for your AI coding agents. They page your phone when they need a decision, so they keep working while you're away. Free and open source: ${REPO_URL}`);
@@ -171,6 +171,7 @@ export function AboutPage({ state, toast }: { state: AppState; toast: (m: string
                     </tbody></table>
                 </div>
                 <div className="plate plate-pad stack" style={{ gap: 8 }}>
+                    <button className="key sm go" onClick={onReplay}><Play size={13} /> Replay intro</button>
                     <button className="key sm" onClick={() => api.openURL(REPO_URL)}><Github size={13} /> Source code</button>
                     <button className="key sm" onClick={() => api.openURL(REPO_URL + '/issues/new')}><Bug size={13} /> Report a problem</button>
                     <button className="key sm" onClick={() => api.openURL(REPO_URL + '/blob/main/LICENSE')}><Scale size={13} /> MIT licence</button>

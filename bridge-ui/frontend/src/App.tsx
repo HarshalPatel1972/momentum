@@ -11,7 +11,7 @@ import Home from './components/Home';
 import Mini from './components/Mini';
 import { AboutPage, IdesPage, LinkPage, LogPage, SettingsPage } from './components/Pages';
 
-type Mode = 'loading' | 'welcome' | 'setup' | 'main';
+type Mode = 'loading' | 'welcome' | 'intro' | 'setup' | 'main';
 
 const MINI = { w: 330, h: 268 };
 const FULL_MIN = { w: 860, h: 580 };
@@ -75,8 +75,10 @@ export default function App() {
         const hash = window.location.hash.slice(1);
         refresh().then(s => {
             if (hash === 'welcome' || hash.startsWith('setup')) return setMode(hash === 'welcome' ? 'welcome' : 'setup');
+            if (hash === 'intro') return setMode('intro');
             if ([...PAGES.map(p => p.id), 'about'].includes(hash as Page)) setPage(hash as Page);
-            setMode(s.configured ? 'main' : 'welcome');
+            // Set up already, but new to this major version: play the story once.
+            setMode(s.configured ? (s.showIntro ? 'intro' : 'main') : 'welcome');
             if (hash === 'mini') setMini(true);
             else if (s.configured) api.startsMini().then(m => { if (m) enterMini(); });
         });
@@ -132,11 +134,12 @@ export default function App() {
         <div className="window">
             <TitleBar live={waiting.length > 0} />
             {mode === 'welcome' && <Welcome onStart={() => setMode('setup')} />}
+            {mode === 'intro' && <Welcome returning version={state.version} onStart={() => { api.markIntroSeen(); setMode('main'); }} />}
             {mode === 'setup' && (
                 <Setup
                     initialStep={Number(window.location.hash.split('-')[1] || 1) - 1}
                     onBack={() => setMode('welcome')}
-                    onFinish={() => { refresh(); setMode('main'); setPage('home'); }}
+                    onFinish={() => { api.markIntroSeen(); refresh(); setMode('main'); setPage('home'); }}
                 />
             )}
             {mode === 'main' && (
@@ -148,7 +151,7 @@ export default function App() {
                         {page === 'ides' && <IdesPage refresh={refresh} toast={toast} />}
                         {page === 'link' && <LinkPage state={state} refresh={refresh} toast={toast} />}
                         {page === 'settings' && <SettingsPage state={state} refresh={refresh} toast={toast} />}
-                        {page === 'about' && <AboutPage state={state} toast={toast} />}
+                        {page === 'about' && <AboutPage state={state} toast={toast} onReplay={() => setMode('intro')} />}
                     </div>
                 </div>
             )}

@@ -14,7 +14,7 @@ import (
 )
 
 // Version is the single source of truth for the app version (updater, MCP server, hub health).
-const Version = "2.0.0"
+const Version = "2.0.1"
 
 // defaultHubPort is the fixed localhost port the hub listens on, so every IDE's
 // MCP process can find it. Override with MOMENTUM_PORT.
@@ -38,6 +38,9 @@ type BridgeConfig struct {
 	// NoPopUp stops the mini pager popping up on screen when a page arrives
 	// while the window is closed.
 	NoPopUp bool `json:"noPopUp,omitempty"`
+	// IntroSeen is the major version whose welcome story this user has seen,
+	// so upgrading to a new major version shows it once.
+	IntroSeen string `json:"introSeen,omitempty"`
 }
 
 type TelegramConfig struct {
@@ -108,6 +111,18 @@ func dataDir() string {
 	d := filepath.Join(base, "Momentum")
 	os.MkdirAll(d, 0700)
 	return d
+}
+
+// majorVersion returns "2" for "2.0.1".
+func majorVersion(v string) string {
+	major, _, _ := strings.Cut(v, ".")
+	return major
+}
+
+// needsIntro reports whether a set-up user should see the welcome story once,
+// because they haven't seen this major version's story yet.
+func needsIntro(cfg BridgeConfig) bool {
+	return configProblem(cfg) == "" && cfg.IntroSeen != majorVersion(Version)
 }
 
 func configPath() string { return filepath.Join(dataDir(), "bridge-config.json") }

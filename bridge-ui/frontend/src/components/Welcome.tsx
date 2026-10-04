@@ -47,18 +47,23 @@ const WORKS_WITH: [string, string][] = [
     ['zed', 'Zed'], ['other', 'Any MCP client'],
 ];
 
-export default function Welcome({ onStart }: { onStart: () => void }) {
+/**
+ * The welcome story. New users see it before setup; set-up users see it once
+ * after upgrading to a new major version, and any time from About → Replay intro.
+ */
+export default function Welcome({ onStart, returning, version }: { onStart: () => void; returning?: boolean; version?: string }) {
     return (
         <div className="welcome">
             <div>
-                <div className="cap">The pager for AI coding agents</div>
+                <div className="cap">{returning ? `Welcome to Momentum ${(version || '').split('.')[0]}.0` : 'The pager for AI coding agents'}</div>
                 <h1>When your agent needs you,<br /><em>it pages your phone.</em></h1>
                 <p className="lede">
-                    Agents in VS Code, Cursor, Claude and others stop and wait whenever they need your OK.
-                    Momentum pages you on Telegram, Slack, Discord or ntfy. You answer with one tap, and the work keeps going.
+                    {returning
+                        ? 'New: works with every IDE, pages you on Telegram, Slack, Discord or ntfy, and lives on your desktop as this pager. Answer from your phone or right here, and the work keeps going.'
+                        : 'Agents in VS Code, Cursor, Claude and others stop and wait whenever they need your OK. Momentum pages you on Telegram, Slack, Discord or ntfy. You answer with one tap, and the work keeps going.'}
                 </p>
                 <div className="cta">
-                    <button className="key go lg" onClick={onStart}>Set up in 2 minutes <ArrowRight size={16} /></button>
+                    <button className="key go lg" onClick={onStart}>{returning ? 'Continue to my pager' : 'Set up in 2 minutes'} <ArrowRight size={16} /></button>
                     <button className="key flat lg" onClick={() => api.openURL(REPO_URL)}><Github size={16} /> Source</button>
                 </div>
                 <div className="promises">

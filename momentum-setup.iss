@@ -2,7 +2,7 @@
 ; Professional Windows installer with modern UI
 
 #define MyAppName "Momentum"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.0.1"
 #define MyAppPublisher "Momentum Labs"
 #define MyAppURL "https://github.com/HarshalPatel1972/momentum"
 #define MyAppExeName "Momentum.exe"

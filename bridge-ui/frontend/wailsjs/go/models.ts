@@ -61,6 +61,7 @@ export namespace main {
 	    running: boolean;
 	    atDesk: boolean;
 	    popUp: boolean;
+	    showIntro: boolean;
 	    idesLinked: number;
 	    idesFound: number;
 	    dataDir: string;
@@ -83,6 +84,7 @@ export namespace main {
 	        this.running = source["running"];
 	        this.atDesk = source["atDesk"];
 	        this.popUp = source["popUp"];
+	        this.showIntro = source["showIntro"];
 	        this.idesLinked = source["idesLinked"];
 	        this.idesFound = source["idesFound"];
 	        this.dataDir = source["dataDir"];

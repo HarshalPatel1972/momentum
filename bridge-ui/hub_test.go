@@ -680,3 +680,24 @@ func TestAnswerFromPC(t *testing.T) {
 		t.Error("unknown question must be refused")
 	}
 }
+
+func TestIntroShownOncePerMajorVersion(t *testing.T) {
+	cfg := telegramCfg()
+	if !needsIntro(cfg) {
+		t.Error("a set-up user upgrading from 1.x should see the 2.x story once")
+	}
+	cfg.IntroSeen = majorVersion(Version)
+	if needsIntro(cfg) {
+		t.Error("the story must not repeat after it was seen")
+	}
+	cfg.IntroSeen = "1"
+	if !needsIntro(cfg) {
+		t.Error("seeing the 1.x story doesn't count for 2.x")
+	}
+	if needsIntro(BridgeConfig{}) {
+		t.Error("new users see the welcome screen anyway; no extra intro")
+	}
+	if majorVersion("2.0.1") != "2" {
+		t.Error("majorVersion")
+	}
+}

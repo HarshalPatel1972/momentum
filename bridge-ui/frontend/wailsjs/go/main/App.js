@@ -106,6 +106,10 @@ export function LoadConfig() {
   return window['go']['main']['App']['LoadConfig']();
 }
 
+export function MarkIntroSeen() {
+  return window['go']['main']['App']['MarkIntroSeen']();
+}
+
 export function NewNtfyTopic() {
   return window['go']['main']['App']['NewNtfyTopic']();
 }

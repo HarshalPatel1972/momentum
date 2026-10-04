@@ -54,6 +54,8 @@ export function ListIDEs():Promise<Array<main.IDEStatus>>;
 
 export function LoadConfig():Promise<string>;
 
+export function MarkIntroSeen():Promise<void>;
+
 export function NewNtfyTopic():Promise<string>;
 
 export function OpenDataFolder():Promise<void>;

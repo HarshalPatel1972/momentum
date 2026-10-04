@@ -15,6 +15,7 @@ export interface AppState {
     running: boolean;
     atDesk: boolean;
     popUp: boolean;
+    showIntro: boolean;
     idesLinked: number;
     idesFound: number;
     dataDir: string;
@@ -87,6 +88,7 @@ export const api = {
     hide: () => Go.HideWindow(),
     show: () => Go.ShowWindow(),
     startsMini: () => Go.StartsMini(),
+    markIntroSeen: () => Go.MarkIntroSeen(),
 };
 
 export const REPO_URL = 'https://github.com/HarshalPatel1972/momentum';
