@@ -326,14 +326,18 @@ func newFakeNtfy(t *testing.T) *fakeNtfy {
 			f.mu.Lock()
 			f.published = append(f.published, m)
 			f.mu.Unlock()
+			// Like the real server, everything published reaches the topic's subscribers.
+			f.deliver(fmt.Sprint(m["topic"]), fmt.Sprint(m["title"]), fmt.Sprint(m["message"]))
 			fmt.Fprintf(w, `{"id":"msg%d"}`, time.Now().UnixNano())
 			return
 		}
 		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/json") {
-			topic := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/"), "/json")
-			ch := make(chan string, 10)
+			topics := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/"), "/json")
+			ch := make(chan string, 20)
 			f.mu.Lock()
-			f.streams[topic] = ch
+			for _, topic := range strings.Split(topics, ",") { // one subscription, several topics
+				f.streams[topic] = ch
+			}
 			f.since = append(f.since, r.URL.Query().Get("since"))
 			f.mu.Unlock()
 			fl := w.(http.Flusher)
@@ -364,12 +368,34 @@ func (f *fakeNtfy) tapAction(t *testing.T, msg map[string]any, i int) {
 	f.publishTo(topic, fmt.Sprint(a["body"]))
 }
 
-func (f *fakeNtfy) publishTo(topic, body string) {
-	b, _ := json.Marshal(map[string]any{"id": fmt.Sprint("m", time.Now().UnixNano()), "event": "message", "message": body})
+// publishTo posts like the phone does: no title (a tap, or text typed in the app).
+func (f *fakeNtfy) publishTo(topic, body string) { f.deliver(topic, "", body) }
+
+func (f *fakeNtfy) deliver(topic, title, body string) {
+	if title == "<nil>" {
+		title = ""
+	}
+	b, _ := json.Marshal(map[string]any{"id": fmt.Sprint("m", time.Now().UnixNano()), "time": time.Now().Unix(),
+		"event": "message", "topic": topic, "title": title, "message": body})
 	f.mu.Lock()
 	ch := f.streams[topic]
 	f.mu.Unlock()
-	ch <- string(b)
+	if ch != nil {
+		ch <- string(b)
+	}
+}
+
+// said returns the messages Momentum posted without buttons (its confirmations).
+func (f *fakeNtfy) said() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []string
+	for _, m := range f.published {
+		if m["actions"] == nil {
+			out = append(out, fmt.Sprint(m["message"]))
+		}
+	}
+	return out
 }
 
 func (f *fakeNtfy) waitPublished(t *testing.T, n int) map[string]any {
@@ -463,5 +489,50 @@ func TestRecentTelegramChatExpires(t *testing.T) {
 	recentChatsMu.Unlock()
 	if _, ok := recentTelegramChat("T"); ok {
 		t.Error("a chat seen an hour ago must not be used to link")
+	}
+}
+
+func TestNtfyTypedReply(t *testing.T) {
+	_, nf, cfg := startNtfyHub(t)
+	done := askAsync(askRequest{Question: "Which DB?", Options: []string{"Postgres", "SQLite"}})
+	m := nf.waitPublished(t, 0)
+	if !strings.Contains(fmt.Sprint(m["message"]), "type an answer in this topic") {
+		t.Errorf("the notification should say typing works: %v", m["message"])
+	}
+	nf.publishTo(cfg.Topic, "use MySQL instead") // typed in the ntfy app's message box
+	if r := await(t, done); r.Answer != "use MySQL instead" {
+		t.Fatalf("got %+v", r)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) && !strings.Contains(strings.Join(nf.said(), "|"), "Sent to") {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !strings.Contains(strings.Join(nf.said(), "|"), "Sent to") {
+		t.Errorf("no confirmation posted: %v", nf.said())
+	}
+}
+
+func TestNtfyTypedReplyPicksQuestionByCode(t *testing.T) {
+	_, nf, cfg := startNtfyHub(t)
+	first := askAsync(askRequest{Question: "Region?", WaitSeconds: 3})
+	nf.waitPublished(t, 0)
+	second := askAsync(askRequest{Question: "Release name?"})
+	m2 := nf.waitPublished(t, 1)
+	msg := fmt.Sprint(m2["message"])
+	code := msg[strings.LastIndex(msg, "start it with ")+len("start it with "):]
+	code = strings.TrimSuffix(code, ".")
+	if len(code) != 4 {
+		t.Fatalf("no code in %q", msg)
+	}
+	nf.publishTo(cfg.Topic, "hello") // ambiguous: two questions open
+	nf.publishTo(cfg.Topic, strings.ToLower(code)+" v2.4.0")
+	if r := await(t, second); r.Answer != "v2.4.0" {
+		t.Fatalf("second = %+v", r)
+	}
+	if r := await(t, first); r.Status != stateWaiting {
+		t.Errorf("the ambiguous message answered the first question: %+v", r)
+	}
+	if !strings.Contains(strings.Join(nf.said(), "|"), "questions are open") {
+		t.Errorf("the ambiguous message should be explained: %v", nf.said())
 	}
 }

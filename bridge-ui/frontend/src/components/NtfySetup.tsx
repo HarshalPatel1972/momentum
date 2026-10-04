@@ -58,7 +58,7 @@ export default function NtfySetup({ onLinked }: { onLinked?: () => void }) {
                 <button className="key flat sm" onClick={copy}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</button>
                 <button className="key flat sm" onClick={() => api.newNtfyTopic().then(setTopic)} title="Make a new random topic"><RefreshCw size={13} /></button>
             </div>
-            <span className="hint">The topic works like a password: anyone who knows it could read your questions, so keep it private. Taps are checked with a per-question secret, so nobody can answer for you.</span>
+            <span className="hint">The topic is the key: anyone who knows it could read your questions and answer them, so keep it private. It's long and random, so it can't be guessed.</span>
 
             <div className="steps-list"><div className="step-item"><span className="step-n">3</span><span>Click <b>Save &amp; send test</b>. A "Momentum is linked" notification should appear on your phone.</span></div></div>
 
@@ -76,7 +76,7 @@ export default function NtfySetup({ onLinked }: { onLinked?: () => void }) {
                     {busy && <LoaderCircle size={16} className="spin" />} Save &amp; send test
                 </button>
             </div>
-            <span className="hint">ntfy shows up to 3 answer buttons and can't take typed replies. Use Telegram, Slack or Discord if you need those.</span>
+            <span className="hint">ntfy shows up to 3 answer buttons. To type an answer instead, use the message box in the ntfy app.</span>
 
             {error && <div className="msg bad"><TriangleAlert size={16} style={{ flex: 'none', marginTop: 1 }} />{error}</div>}
             {saved && !error && (

@@ -134,6 +134,19 @@ func (c *ChannelHost) Secret(id string) string {
 	return ""
 }
 
+// HasRef reports whether a waiting question has this message ref (ntfy uses
+// short codes as refs, so typed answers can say which question they answer).
+func (c *ChannelHost) HasRef(ref string) bool {
+	c.h.mu.Lock()
+	defer c.h.mu.Unlock()
+	for _, q := range c.h.questions {
+		if q.ref == ref && q.state == stateWaiting {
+			return true
+		}
+	}
+	return false
+}
+
 // TextResult says what a typed message did, so the channel can tell the user.
 type TextResult struct {
 	Answered *pendingQuestion

@@ -47,7 +47,7 @@ That's the only account you need. No ngrok, no port forwarding.
 
 **Discord (popular with developers, about 3 minutes):** create an application in the [Discord Developer Portal](https://discord.com/developers/applications), open **Bot → Reset Token** and paste the token into Momentum. Click **Add bot to a server** (Discord only lets you DM bots you share a server with; it asks for no permissions), then **Detect** and send the bot any DM.
 
-**ntfy (no account, works in any country):** install the free [ntfy](https://ntfy.sh) app, subscribe to the private topic Momentum shows you, and click **Save & send test**. You can also point it at your own ntfy server. ntfy shows up to 3 answer buttons and can't take typed replies.
+**ntfy (no account, works in any country):** install the free [ntfy](https://ntfy.sh) app, subscribe to the private topic Momentum shows you, and click **Save & send test**. You can also point it at your own ntfy server. ntfy shows up to 3 answer buttons; to type an answer, use the message box in the ntfy app.
 
 **WhatsApp** also works (via CallMeBot), but it can only send a link, so it needs a free ngrok token too.
 
@@ -132,7 +132,7 @@ Your phone will buzz. Tap an answer button right in your messaging app (or reply
 
 - Each IDE starts its own small `Momentum.exe --mcp` process. These all hand their questions to **one shared hub** on `127.0.0.1`, so several IDEs can be open at the same time.
 - The hub sends each question to your Telegram bot, Slack or Discord DM, or ntfy topic, with the options as **buttons**. It collects your tap over an outgoing connection: Telegram long-polling, Slack's Socket Mode, the Discord Gateway, or an ntfy subscription. So it needs no tunnel, public URL or firewall change. After you answer, the message updates to show the answer and its buttons disappear.
-- Want to type instead? **Reply** to the question (in Slack, reply in its thread). If only one question is open, any message you send answers it. (ntfy has no typed replies.)
+- Want to type instead? **Reply** to the question (in Slack, reply in its thread). If only one question is open, any message you send answers it. (In ntfy, type in the app's message box; if several questions are open, start with the code shown in the question.)
 - If the Momentum window isn't open, the hub starts by itself in the background (tray icon: *Momentum (background)*). Opening the app takes over from it.
 - Messages say which IDE and project is asking, e.g. *Cursor · my-app*.
 - The agent gets two tools: `ask_remote_human` (asks and waits) and `get_remote_answer`. Some clients (e.g. Claude Desktop) cancel tool calls after about 60 seconds. For those, Momentum returns a `request_id` before that limit and the agent keeps waiting with `get_remote_answer`, so your answer is never lost.
@@ -140,7 +140,7 @@ Your phone will buzz. Tap an answer button right in your messaging app (or reply
 
 ### Privacy & security
 - Your question text goes through the messaging service you chose (Telegram, Slack, Discord, ntfy, or CallMeBot + an ngrok answer page for WhatsApp). Nothing is stored on any Momentum server; there isn't one.
-- Only you can answer: taps and messages from anyone else are ignored, and ntfy taps must carry the question's own secret. Each question can be answered once.
+- Only you can answer: taps and messages from anyone else are ignored. With ntfy there are no user accounts, so the private topic is the key: keep it secret. Each question can be answered once.
 - With Telegram, Slack, Discord or ntfy, nothing on your PC is reachable from the internet. The local API that IDEs talk to listens on `127.0.0.1` only and requires a per-user key.
 - Config lives in `%APPDATA%\Momentum\` and is shared by every IDE and every copy of `Momentum.exe`.
 
