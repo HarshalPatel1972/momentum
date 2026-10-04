@@ -1,7 +1,45 @@
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Github, ShieldCheck } from 'lucide-react';
-import { api, Brand, IdeTile, REPO_URL } from '../lib';
-import StoryScene from './StoryScene';
+import { api, IdeTile, REPO_URL } from '../lib';
+
+// The story, told on the pager's own screen. Each beat: [top line, main text, sub, which key is pressed]
+const BEATS: { top: string; main: string; sub: string; press?: 'go'; ms: number; led?: boolean }[] = [
+    { top: 'AWAY · ON CALL', main: 'ALL QUIET', sub: 'your agent is refactoring auth…', ms: 2200 },
+    { top: 'CURSOR·MY-APP', main: 'PAGE!', sub: 'your agent needs a decision', ms: 1100, led: true },
+    { top: 'CURSOR·MY-APP', main: 'DELETE 14 LEGACY FILES?', sub: '[APPROVE]  DENY', ms: 2300, led: true },
+    { top: 'CURSOR·MY-APP', main: 'DELETE 14 LEGACY FILES?', sub: '[APPROVE]  DENY', press: 'go', ms: 700, led: true },
+    { top: 'CURSOR·MY-APP', main: 'SENT ✓', sub: 'agent carries on · 128 tests passed', ms: 2600 },
+];
+
+function StoryPager() {
+    const [i, setI] = useState(0);
+    useEffect(() => {
+        const t = setTimeout(() => setI(n => (n + 1) % BEATS.length), BEATS[i].ms);
+        return () => clearTimeout(t);
+    }, [i]);
+    const b = BEATS[i];
+    const page = i >= 1 && i <= 3;
+    return (
+        <div style={{ transform: i === 1 ? 'rotate(-1.2deg)' : 'none', transition: 'transform .08s' }}>
+            <div className="device" style={{ padding: 18 }}>
+                <div className="device-label"><span>Momentum · MP-1</span><span className="live"><span className={`led ${b.led ? 'on blink' : 'green'}`} />{page ? '1 page' : 'on call'}</span></div>
+                <div className="lcd" style={{ minHeight: 210 }}>
+                    <div className="lcd-top"><span>{b.top}</span><span>21:42</span></div>
+                    <div className={`lcd-main ${b.main.length > 14 ? 'small' : ''}`} style={{ fontSize: b.main.length > 14 ? 26 : 38 }}>{b.main}{!page && i !== 4 && <span className="cursor" />}</div>
+                    <div className="lcd-sub">{b.sub}</div>
+                </div>
+                <div className="device-keys">
+                    <div className="key go" style={b.press ? { transform: 'translateY(3px)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,.3)' } : undefined}>APPROVE</div>
+                    <div className="key dark">DENY</div>
+                    <div className="key dark">REPLY</div>
+                </div>
+            </div>
+            <div className="row" style={{ justifyContent: 'center', gap: 6, marginTop: 14 }}>
+                {BEATS.map((_, n) => <span key={n} style={{ width: n === i ? 22 : 8, height: 4, borderRadius: 3, background: n === i ? 'var(--orange)' : 'var(--line)', transition: 'all .25s' }} />)}
+            </div>
+        </div>
+    );
+}
 
 const WORKS_WITH: [string, string][] = [
     ['vscode', 'VS Code'], ['cursor', 'Cursor'], ['windsurf', 'Windsurf'], ['antigravity', 'Antigravity'],
@@ -10,45 +48,30 @@ const WORKS_WITH: [string, string][] = [
 ];
 
 export default function Welcome({ onStart }: { onStart: () => void }) {
-    const rise = (d: number) => ({ initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { delay: d, duration: .5 } });
-
     return (
         <div className="welcome">
-            <div className="welcome-left">
-                <Brand />
-                <div className="welcome-copy">
-                    <motion.div className="eyebrow" {...rise(.05)}>For AI coding agents</motion.div>
-                    <motion.h1 {...rise(.12)}>
-                        Your agent keeps going.<br /><span className="grad">Even when you’re away.</span>
-                    </motion.h1>
-                    <motion.p className="lede" {...rise(.2)}>
-                        Agents in VS Code, Cursor, Windsurf, Claude and others stop and wait whenever they need your OK.
-                        Momentum sends those questions to your phone. You tap once, and the work continues.
-                    </motion.p>
-                    <motion.div className="welcome-cta" {...rise(.28)}>
-                        <button className="btn btn-primary btn-lg" onClick={onStart}>
-                            Set up in 2 minutes <ArrowRight size={17} />
-                        </button>
-                        <button className="btn btn-ghost btn-lg" onClick={() => api.openURL(REPO_URL)}>
-                            <Github size={17} /> View source
-                        </button>
-                    </motion.div>
-                    <motion.div className="trust-row" {...rise(.36)}>
-                        <span><ShieldCheck size={14} /> Free and open source</span>
-                        <span><ShieldCheck size={14} /> No account, no Momentum servers</span>
-                        <span><ShieldCheck size={14} /> Nothing on your PC is exposed to the internet</span>
-                    </motion.div>
-                    <motion.div className="works-with" {...rise(.44)}>
-                        <div className="label">Works with</div>
-                        <div className="logos">
-                            {WORKS_WITH.map(([id, name]) => <div key={id} title={name}><IdeTile id={id} /></div>)}
-                        </div>
-                    </motion.div>
+            <div>
+                <div className="cap">The pager for AI coding agents</div>
+                <h1>When your agent needs you,<br /><em>it pages your phone.</em></h1>
+                <p className="lede">
+                    Agents in VS Code, Cursor, Claude and others stop and wait whenever they need your OK.
+                    Momentum pages you on Telegram, Slack, Discord or ntfy. You answer with one tap, and the work keeps going.
+                </p>
+                <div className="cta">
+                    <button className="key go lg" onClick={onStart}>Set up in 2 minutes <ArrowRight size={16} /></button>
+                    <button className="key flat lg" onClick={() => api.openURL(REPO_URL)}><Github size={16} /> Source</button>
+                </div>
+                <div className="promises">
+                    <span className="stamp ok"><ShieldCheck size={12} /> Free &amp; open source</span>
+                    <span className="stamp ok"><ShieldCheck size={12} /> No account · no servers</span>
+                    <span className="stamp ok"><ShieldCheck size={12} /> 0 ports opened</span>
+                </div>
+                <div className="works">
+                    <div className="cap">Works with</div>
+                    <div className="logos">{WORKS_WITH.map(([id, name]) => <div key={id} title={name}><IdeTile id={id} /></div>)}</div>
                 </div>
             </div>
-            <div className="welcome-right">
-                <StoryScene />
-            </div>
+            <StoryPager />
         </div>
     );
 }

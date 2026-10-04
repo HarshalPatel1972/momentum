@@ -1,31 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Activity as ActivityIcon, House, Info, Plug, Settings as SettingsIcon } from 'lucide-react';
-import { EventsOn } from '../wailsjs/runtime';
-import { Activity, api, AppState, Brand } from './lib';
+import {
+    EventsOn, ScreenGetAll, WindowGetPosition, WindowGetSize, WindowSetAlwaysOnTop,
+    WindowSetMinSize, WindowSetPosition, WindowSetSize,
+} from '../wailsjs/runtime';
+import { Activity, api, AppState } from './lib';
+import { Page, PAGES, Rail, StatusBar, TitleBar } from './components/Chrome';
 import Welcome from './components/Welcome';
 import Setup from './components/Setup';
 import Home from './components/Home';
-import { AboutPage, ActivityPage, IdesPage, SettingsPage } from './components/Pages';
+import Mini from './components/Mini';
+import { AboutPage, IdesPage, LinkPage, LogPage, SettingsPage } from './components/Pages';
 
 type Mode = 'loading' | 'welcome' | 'setup' | 'main';
-type Page = 'home' | 'activity' | 'ides' | 'settings' | 'about';
 
-const NAV: { id: Page; label: string; icon: typeof House }[] = [
-    { id: 'home', label: 'Home', icon: House },
-    { id: 'activity', label: 'Activity', icon: ActivityIcon },
-    { id: 'ides', label: 'IDEs', icon: Plug },
-    { id: 'settings', label: 'Settings', icon: SettingsIcon },
-    { id: 'about', label: 'About', icon: Info },
-];
+const MINI = { w: 330, h: 268 };
+const FULL_MIN = { w: 860, h: 580 };
 
 export default function App() {
     const [mode, setMode] = useState<Mode>('loading');
     const [page, setPage] = useState<Page>('home');
     const [state, setState] = useState<AppState | null>(null);
     const [activity, setActivity] = useState<Activity[]>([]);
+    const [mini, setMini] = useState(false);
     const [toastMsg, setToastMsg] = useState('');
     const toastTimer = useRef<number>();
+    const saved = useRef<{ w: number; h: number; x: number; y: number } | null>(null);
+    const popped = useRef(false); // the mini pager popped up by itself for a page
 
     const refresh = useCallback(async () => {
         const [s, a] = await Promise.all([api.state(), api.activity()]);
@@ -40,71 +40,111 @@ export default function App() {
         toastTimer.current = window.setTimeout(() => setToastMsg(''), 3200);
     }, []);
 
+    // ----- mini pager: shrink the window into an always-on-top widget in the corner -----
+    const enterMini = useCallback(async () => {
+        const [size, pos] = await Promise.all([WindowGetSize(), WindowGetPosition()]);
+        saved.current = { w: size.w, h: size.h, x: pos.x, y: pos.y };
+        WindowSetMinSize(MINI.w, MINI.h);
+        WindowSetSize(MINI.w, MINI.h);
+        const screens = await ScreenGetAll();
+        const s = screens.find(x => x.isCurrent) || screens.find(x => x.isPrimary) || screens[0];
+        if (s) WindowSetPosition(s.width - MINI.w - 18, s.height - MINI.h - 64);
+        WindowSetAlwaysOnTop(true);
+        setMini(true);
+    }, []);
+
+    const exitMini = useCallback(async () => {
+        WindowSetAlwaysOnTop(false);
+        WindowSetMinSize(FULL_MIN.w, FULL_MIN.h);
+        const p = saved.current;
+        WindowSetSize(p?.w || 1020, p?.h || 680);
+        if (p) WindowSetPosition(p.x, p.y);
+        popped.current = false;
+        setMini(false);
+    }, []);
+
+    const toggleMini = useCallback(() => (mini ? exitMini() : enterMini()), [mini, enterMini, exitMini]);
+
     useEffect(() => {
         // "#setup-2", "#welcome" or "#<page>" opens a screen directly (previews/screenshots).
         const hash = window.location.hash.slice(1);
         refresh().then(s => {
             if (hash === 'welcome' || hash.startsWith('setup')) return setMode(hash === 'welcome' ? 'welcome' : 'setup');
-            if (NAV.some(n => n.id === hash)) setPage(hash as Page);
+            if ([...PAGES.map(p => p.id), 'about'].includes(hash as Page)) setPage(hash as Page);
             setMode(s.configured ? 'main' : 'welcome');
+            if (hash === 'mini') setMini(true);
         });
         const offs = [
             EventsOn('activity', () => api.activity().then(a => setActivity(a || []))),
             EventsOn('state', () => refresh()),
         ];
-        // Keep the status honest if a background hub starts or stops.
         const poll = window.setInterval(refresh, 8000);
         return () => { offs.forEach(off => off()); window.clearInterval(poll); };
     }, [refresh]);
 
-    const waiting = activity.filter(a => a.state === 'waiting').length;
+    // A page arrived while the window was closed: pop up the mini pager.
+    useEffect(() => EventsOn('popup', async () => {
+        api.show();
+        if (!mini) await enterMini();
+        popped.current = true;
+    }), [mini, enterMini]);
 
-    if (mode === 'loading' || !state) return <div style={{ height: '100%', background: 'var(--bg)' }} />;
-    if (mode === 'welcome') return <Welcome onStart={() => setMode('setup')} />;
-    if (mode === 'setup') return <Setup initialStep={Number(window.location.hash.split('-')[1] || 1) - 1} onBack={() => setMode('welcome')} onFinish={() => { refresh(); setMode('main'); setPage('home'); }} />;
+    // Keyboard: Ctrl+1–4 / Ctrl+, switch views, Ctrl+M toggles the mini pager.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (!e.ctrlKey || mode !== 'main') return;
+            const p = PAGES.find(x => x.key === e.key);
+            if (p) { e.preventDefault(); if (mini) exitMini(); setPage(p.id); }
+            if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMini(); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [mode, mini, toggleMini, exitMini]);
+
+    const waiting = activity.filter(a => a.state === 'waiting');
+
+    if (mode === 'loading' || !state) return <div style={{ height: '100%', background: 'var(--body)' }} />;
+
+    if (mini) {
+        return (
+            <Mini
+                page={waiting[0]}
+                onExpand={exitMini}
+                onClose={async () => { await exitMini(); api.hide(); }}
+                onAnswered={() => {
+                    // Popped up just for this page: tuck back into the tray once answered.
+                    if (popped.current) setTimeout(async () => { await exitMini(); api.hide(); }, 2200);
+                }}
+            />
+        );
+    }
 
     return (
-        <div className="shell">
-            <aside className="sidebar">
-                <Brand />
-                <nav className="nav">
-                    {NAV.map(n => (
-                        <button key={n.id} className={page === n.id ? 'active' : ''} onClick={() => setPage(n.id)}>
-                            <n.icon size={17} /> {n.label}
-                            {n.id === 'activity' && waiting > 0 && <span className="count">{waiting}</span>}
-                        </button>
-                    ))}
-                </nav>
-                <div className="side-foot">
-                    <div className="side-status">
-                        <span className={`dot ${!state.running ? 'bad' : state.atDesk ? 'warn' : 'ok live'}`} />
-                        <div>
-                            <b>{!state.running ? 'Not running' : state.atDesk ? 'At your desk' : 'Away mode on'}</b>
-                            <span className="faint">{!state.running ? (state.problem || 'Open Settings') : state.atDesk ? 'Agents ask in chat' : 'Questions go to your phone'}</span>
-                        </div>
+        <div className="window">
+            <TitleBar live={waiting.length > 0} />
+            {mode === 'welcome' && <Welcome onStart={() => setMode('setup')} />}
+            {mode === 'setup' && (
+                <Setup
+                    initialStep={Number(window.location.hash.split('-')[1] || 1) - 1}
+                    onBack={() => setMode('welcome')}
+                    onFinish={() => { refresh(); setMode('main'); setPage('home'); }}
+                />
+            )}
+            {mode === 'main' && (
+                <div className="frame">
+                    <Rail page={page} go={setPage} waiting={waiting.length} />
+                    <div className="view" key={page}>
+                        {page === 'home' && <Home state={state} activity={activity} go={p => setPage(p)} toast={toast} refresh={refresh} />}
+                        {page === 'log' && <LogPage activity={activity} toast={toast} />}
+                        {page === 'ides' && <IdesPage refresh={refresh} toast={toast} />}
+                        {page === 'link' && <LinkPage state={state} refresh={refresh} toast={toast} />}
+                        {page === 'settings' && <SettingsPage state={state} refresh={refresh} toast={toast} />}
+                        {page === 'about' && <AboutPage state={state} toast={toast} />}
                     </div>
-                    <div className="side-ver">Momentum {state.version}</div>
                 </div>
-            </aside>
-
-            <AnimatePresence mode="wait">
-                <motion.div key={page} style={{ minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .18 }}>
-                    {page === 'home' && <Home state={state} activity={activity} go={setPage} toast={toast} refresh={refresh} />}
-                    {page === 'activity' && <ActivityPage activity={activity} toast={toast} />}
-                    {page === 'ides' && <IdesPage refresh={refresh} toast={toast} />}
-                    {page === 'settings' && <SettingsPage state={state} refresh={refresh} toast={toast} />}
-                    {page === 'about' && <AboutPage state={state} toast={toast} />}
-                </motion.div>
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {toastMsg && (
-                    <motion.div className="toast" initial={{ opacity: 0, y: 12, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 12, x: '-50%' }}>
-                        {toastMsg}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            )}
+            <StatusBar state={state} waiting={waiting.length} />
+            {toastMsg && <div className="toast">{toastMsg}</div>}
         </div>
     );
 }

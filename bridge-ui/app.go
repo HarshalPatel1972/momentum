@@ -18,6 +18,7 @@ import (
 type App struct {
 	ctx         context.Context
 	wantsToQuit bool
+	hidden      bool // window closed to the tray
 	hub         *Hub
 }
 
@@ -33,7 +34,15 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(a.ctx, "log", msg)
 	}
 	a.hub.OnPublicURL = func(u string) { runtime.EventsEmit(a.ctx, "publicURL", u) }
-	a.hub.OnActivity = func(act Activity) { runtime.EventsEmit(a.ctx, "activity", act) }
+	a.hub.OnActivity = func(act Activity) {
+		runtime.EventsEmit(a.ctx, "activity", act)
+		// A new page while the window is closed: pop up the mini pager.
+		if act.State == stateWaiting && a.hidden {
+			if cfg, _ := loadConfig(); !cfg.NoPopUp {
+				runtime.EventsEmit(a.ctx, "popup", act)
+			}
+		}
+	}
 
 	// Once set up, Momentum just runs: no "start" button to forget.
 	if cfg, err := loadConfig(); err == nil && configProblem(cfg) == "" {
@@ -55,17 +64,41 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 		return false
 	}
 	// Closing the window keeps Momentum running in the tray.
+	a.hidden = true
 	runtime.WindowHide(ctx)
 	return true
 }
 
 func (a *App) ShowWindow() {
+	a.hidden = false
+	runtime.EventsEmit(a.ctx, "shown")
 	runtime.WindowShow(a.ctx)
 	runtime.WindowSetAlwaysOnTop(a.ctx, true)
 	runtime.WindowSetAlwaysOnTop(a.ctx, false)
 }
 
-func (a *App) HideWindow() { runtime.WindowHide(a.ctx) }
+func (a *App) HideWindow() {
+	a.hidden = true
+	runtime.WindowHide(a.ctx)
+}
+
+// AnswerQuestion answers a waiting question from the app (the pager's keys).
+func (a *App) AnswerQuestion(id, answer string) bool {
+	if a.hub.IsRunning() {
+		return a.hub.AnswerFromPC(id, answer)
+	}
+	return false
+}
+
+// SetPopUp turns the pop-up mini pager on or off.
+func (a *App) SetPopUp(on bool) string {
+	cfg, _ := loadConfig()
+	cfg.NoPopUp = !on
+	if err := saveConfig(cfg); err != nil {
+		return err.Error()
+	}
+	return ""
+}
 
 func (a *App) QuitApp() {
 	a.hub.Stop()
@@ -87,6 +120,7 @@ type AppState struct {
 	DiscordUser string `json:"discordUser"`
 	Running     bool   `json:"running"`
 	AtDesk      bool   `json:"atDesk"`
+	PopUp       bool   `json:"popUp"`
 	IDEsLinked  int    `json:"idesLinked"`
 	IDEsFound   int    `json:"idesFound"`
 	DataDir     string `json:"dataDir"`
@@ -106,6 +140,7 @@ func (a *App) GetState() AppState {
 		DiscordUser: cfg.Discord.UserName,
 		Running:     a.IsBridgeRunning(),
 		AtDesk:      cfg.AtDesk,
+		PopUp:       !cfg.NoPopUp,
 		DataDir:     dataDir(),
 	}
 	st.Configured = st.Problem == ""

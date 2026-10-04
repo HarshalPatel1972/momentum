@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Check, Send, Smartphone, X } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { api } from '../lib';
 
 type Phase = 'idle' | 'waiting' | 'ok' | 'bad';
 
-/** Sends a real question to the phone and shows the answer coming back. */
+/** Sends a real page to the phone and shows the answer coming back on the pager's screen. */
 export default function TestQuestion({ onDone }: { onDone?: () => void }) {
     const [phase, setPhase] = useState<Phase>('idle');
     const [answer, setAnswer] = useState('');
@@ -18,30 +17,24 @@ export default function TestQuestion({ onDone }: { onDone?: () => void }) {
         if (!res.startsWith('Error')) onDone?.();
     };
 
+    const screen = {
+        idle: { top: 'TEST', main: 'READY TO PAGE', sub: 'goes through the exact path your agents use' },
+        waiting: { top: 'TEST · SENT', main: 'CHECK YOUR PHONE', sub: 'tap a button there…' },
+        ok: { top: 'TEST · ANSWERED', main: 'IT WORKS ✓', sub: `you answered “${answer}”` },
+        bad: { top: 'TEST · FAILED', main: 'NO SIGNAL', sub: answer },
+    }[phase];
+
     return (
-        <div className="card test-stage">
-            <motion.div key={phase} className={`test-orb ${phase === 'waiting' ? 'wait' : phase}`} initial={{ scale: .9 }} animate={{ scale: 1 }}>
-                {phase === 'ok' ? <Check size={40} /> : phase === 'bad' ? <X size={40} /> : <Smartphone size={38} />}
-            </motion.div>
-            {phase === 'idle' && <>
-                <h3>Send yourself a real question</h3>
-                <p className="muted" style={{ maxWidth: 380 }}>It goes through the exact path your agents will use. Tap a button when it arrives on your phone.</p>
-                <button className="btn btn-primary btn-lg" onClick={send}><Send size={16} /> Send test to my phone</button>
-            </>}
-            {phase === 'waiting' && <>
-                <h3>Check your phone</h3>
-                <p className="muted">Waiting for your tap in Telegram…</p>
-            </>}
-            {phase === 'ok' && <>
-                <h3>It works.</h3>
-                <p className="muted">You answered <b style={{ color: 'var(--text)' }}>“{answer}”</b>. Your agents can now reach you anywhere.</p>
-                <button className="btn btn-ghost btn-sm" onClick={send}>Send another</button>
-            </>}
-            {phase === 'bad' && <>
-                <h3>That didn't go through</h3>
-                <p className="muted" style={{ maxWidth: 420 }}>{answer}</p>
-                <button className="btn btn-secondary" onClick={send}>Try again</button>
-            </>}
+        <div className="device">
+            <div className="device-label"><span>Test page</span><span className="live"><span className={`led ${phase === 'waiting' ? 'on blink' : phase === 'ok' ? 'green' : ''}`} />{phase}</span></div>
+            <div className="lcd" style={{ minHeight: 150 }}>
+                <div className="lcd-top"><span>{screen.top}</span><span /></div>
+                <div className="lcd-main">{screen.main}{phase === 'waiting' && <span className="cursor" />}</div>
+                <div className="lcd-sub">{screen.sub}</div>
+            </div>
+            <div className="device-keys">
+                <button className="key go" onClick={send} disabled={phase === 'waiting'}><Send size={14} /> {phase === 'idle' ? 'Send test page' : 'Send another'}</button>
+            </div>
         </div>
     );
 }

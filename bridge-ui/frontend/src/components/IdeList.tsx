@@ -54,31 +54,31 @@ export default function IdeList({ compact, onChange }: Props) {
     const pending = found.filter(i => !i.connected || i.stale).length;
 
     const status = (i: IDEStatus) => {
-        if (errors[i.id]) return <span className="badge bad"><TriangleAlert size={12} /> Needs manual setup</span>;
-        if (i.stale) return <span className="badge warn"><TriangleAlert size={12} /> Points to an old Momentum</span>;
-        if (i.connected) return <span className="badge ok"><Check size={12} /> Connected</span>;
-        if (i.installed) return <span className="badge">Found on this PC</span>;
+        if (errors[i.id]) return <span className="stamp bad"><TriangleAlert size={12} /> Needs manual setup</span>;
+        if (i.stale) return <span className="stamp warn"><TriangleAlert size={12} /> Points to an old Momentum</span>;
+        if (i.connected) return <span className="stamp ok"><Check size={12} /> Connected</span>;
+        if (i.installed) return <span className="stamp dim">Found on this PC</span>;
         return null;
     };
 
     const item = (i: IDEStatus) => (
         <div key={i.id}>
-            <div className="ide-item">
+            <div className="ide-row">
                 <IdeTile id={i.id} />
                 <div className="grow">
                     <div className="row" style={{ gap: 8 }}><span className="ide-name">{i.name}</span>{status(i)}</div>
                     <div className="ide-sub">{errors[i.id] || (i.manual ? i.note : i.configPath)}</div>
                 </div>
                 {!i.manual && (i.connected && !i.stale ? (
-                    !compact && <button className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => act(i, false)}><Unplug size={14} /> Disconnect</button>
+                    !compact && <button className="key flat sm" disabled={!!busy} onClick={() => act(i, false)}><Unplug size={14} /> Disconnect</button>
                 ) : (
-                    <button className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => act(i, true)}>
+                    <button className="key sm" disabled={!!busy} onClick={() => act(i, true)}>
                         {busy === i.id ? <LoaderCircle size={14} className="spin" /> : i.stale ? <RefreshCw size={14} /> : <Plug size={14} />}
                         {i.stale ? 'Repair' : 'Connect'}
                     </button>
                 ))}
                 {!compact && (
-                    <button className="btn btn-ghost btn-sm" onClick={() => toggleSnippet(i.id)} title="Show the config to paste yourself">
+                    <button className="key flat sm" onClick={() => toggleSnippet(i.id)} title="Show the config to paste yourself">
                         <FileCode2 size={14} /> {i.manual ? 'Get config' : 'Manual'}
                     </button>
                 )}
@@ -87,7 +87,7 @@ export default function IdeList({ compact, onChange }: Props) {
                 <div className="snippet">
                     <div className="row" style={{ marginBottom: 8 }}>
                         <span className="faint grow" style={{ fontSize: 12 }}>{i.configPath ? `Add to ${i.configPath}` : i.note}</span>
-                        <button className="btn btn-ghost btn-sm" onClick={copy}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</button>
+                        <button className="key flat sm" onClick={copy}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</button>
                     </div>
                     <pre>{open.text}</pre>
                 </div>
@@ -97,14 +97,14 @@ export default function IdeList({ compact, onChange }: Props) {
 
     return (
         <div className="stack">
-            <div className="card">
+            <div className="plate">
                 <div className="row" style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
                     <div className="grow">
-                        <div className="card-title">On this PC</div>
-                        <div className="card-sub">{found.length ? `${found.length - pending} of ${found.length} connected` : 'No supported IDEs found yet'}</div>
+                        <div className="plate-title">On this PC</div>
+                        <div className="plate-sub">{found.length ? `${found.length - pending} of ${found.length} connected` : 'No supported IDEs found yet'}</div>
                     </div>
                     {pending > 0 && (
-                        <button className="btn btn-primary btn-sm" onClick={connectAll} disabled={!!busy}>
+                        <button className="key go sm" onClick={connectAll} disabled={!!busy}>
                             {busy === 'all' ? <LoaderCircle size={14} className="spin" /> : <Plug size={14} />} Connect all
                         </button>
                     )}
@@ -114,14 +114,14 @@ export default function IdeList({ compact, onChange }: Props) {
 
             {!compact && others.length > 0 && (
                 <>
-                    <div className="section-label">Also supported</div>
-                    <div className="card"><div className="ide-list">{others.map(item)}</div></div>
+                    <div className="cap section-label">Also supported</div>
+                    <div className="plate"><div className="ide-list">{others.map(item)}</div></div>
                 </>
             )}
             {!compact && (
                 <>
-                    <div className="section-label">Anything else that speaks MCP</div>
-                    <div className="card"><div className="ide-list">{manual.map(item)}</div></div>
+                    <div className="cap section-label">Anything else that speaks MCP</div>
+                    <div className="plate"><div className="ide-list">{manual.map(item)}</div></div>
                 </>
             )}
             <div className="hint">

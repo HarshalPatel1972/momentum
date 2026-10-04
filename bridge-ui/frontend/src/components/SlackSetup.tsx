@@ -48,33 +48,33 @@ export default function SlackSetup({ onLinked }: { onLinked?: () => void }) {
 
     return (
         <div className="stack">
-            <div className="howto">
-                <div className="howto-item"><span className="howto-n">1</span>
+            <div className="steps-list">
+                <div className="step-item"><span className="step-n">1</span>
                     <span>
                         Create the Momentum app in your Slack workspace. It's pre-filled, so just pick the workspace, then <b>Create</b> and <b>Install to Workspace</b>.
                         <span className="row" style={{ marginTop: 8, gap: 8 }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => api.openSlackSetup()}><BrandLogo name="slack" size={14} /> Create Slack app <ExternalLink size={12} /></button>
-                            <button className="btn btn-ghost btn-sm" onClick={copyManifest}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy manifest instead'}</button>
+                            <button className="key sm" onClick={() => api.openSlackSetup()}><BrandLogo name="slack" size={14} /> Create Slack app <ExternalLink size={12} /></button>
+                            <button className="key flat sm" onClick={copyManifest}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy manifest instead'}</button>
                         </span>
                     </span>
                 </div>
-                <div className="howto-item"><span className="howto-n">2</span><span>Under <b>OAuth &amp; Permissions</b>, copy the <b>Bot User OAuth Token</b> (starts with <span className="kbd">xoxb-</span>).</span></div>
-                <div className="howto-item"><span className="howto-n">3</span><span>Under <b>Basic Information → App-Level Tokens</b>, generate a token with the <span className="kbd">connections:write</span> scope (starts with <span className="kbd">xapp-</span>).</span></div>
-                <div className="howto-item"><span className="howto-n">4</span><span>In Slack, open <b>Momentum</b> under Apps and send it any message. Then click <b>Detect</b>.</span></div>
+                <div className="step-item"><span className="step-n">2</span><span>Under <b>OAuth &amp; Permissions</b>, copy the <b>Bot User OAuth Token</b> (starts with <span className="chip">xoxb-</span>).</span></div>
+                <div className="step-item"><span className="step-n">3</span><span>Under <b>Basic Information → App-Level Tokens</b>, generate a token with the <span className="chip">connections:write</span> scope (starts with <span className="chip">xapp-</span>).</span></div>
+                <div className="step-item"><span className="step-n">4</span><span>In Slack, open <b>Momentum</b> under Apps and send it any message. Then click <b>Detect</b>.</span></div>
             </div>
 
             <div className="field">
                 <label>Bot token</label>
-                <div className="input-wrap">
+                <div className="input-row">
                     <input className="input" type={type} value={bot} onChange={e => { setBot(e.target.value); setError(''); }} placeholder="xoxb-…" spellCheck={false} />
-                    <button className="btn btn-secondary" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>{reveal ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                    <button className="key" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>{reveal ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
             </div>
             <div className="field">
                 <label>App-level token</label>
-                <div className="input-wrap">
+                <div className="input-row">
                     <input className="input" type={type} value={app} onChange={e => { setApp(e.target.value); setError(''); }} placeholder="xapp-…" spellCheck={false} />
-                    <button className="btn btn-primary" onClick={detect} disabled={busy || !ready}>
+                    <button className="key go" onClick={detect} disabled={busy || !ready}>
                         {busy && <LoaderCircle size={16} className="spin" />}
                         {busy ? 'Waiting for your message…' : linked ? 'Re-detect' : 'Detect'}
                     </button>

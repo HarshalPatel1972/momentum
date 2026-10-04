@@ -60,6 +60,7 @@ export namespace main {
 	    discordUser: string;
 	    running: boolean;
 	    atDesk: boolean;
+	    popUp: boolean;
 	    idesLinked: number;
 	    idesFound: number;
 	    dataDir: string;
@@ -81,6 +82,7 @@ export namespace main {
 	        this.discordUser = source["discordUser"];
 	        this.running = source["running"];
 	        this.atDesk = source["atDesk"];
+	        this.popUp = source["popUp"];
 	        this.idesLinked = source["idesLinked"];
 	        this.idesFound = source["idesFound"];
 	        this.dataDir = source["dataDir"];

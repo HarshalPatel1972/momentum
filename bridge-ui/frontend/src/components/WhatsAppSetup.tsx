@@ -29,7 +29,7 @@ export default function WhatsAppSetup({ onSaved }: { onSaved?: () => void }) {
             <div className="field"><label>Your WhatsApp number</label><input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 98765 43210" /></div>
             <div className="field"><label>ngrok auth token</label><input className="input" type="password" value={ngrok} onChange={e => setNgrok(e.target.value)} placeholder="2abc…" /></div>
             <div className="row">
-                <button className="btn btn-primary" onClick={save} disabled={!key || !phone || !ngrok}>Save WhatsApp</button>
+                <button className="key go" onClick={save} disabled={!key || !phone || !ngrok}>Save WhatsApp</button>
                 {msg && <span className={`msg ${msg.ok ? 'ok' : 'bad'}`}>{msg.ok ? <Check size={15} /> : <TriangleAlert size={15} />}{msg.text}</span>}
             </div>
         </div>

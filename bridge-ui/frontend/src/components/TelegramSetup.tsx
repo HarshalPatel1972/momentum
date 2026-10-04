@@ -45,16 +45,16 @@ export default function TelegramSetup({ onLinked, showSteps = true }: Props) {
     return (
         <div className="stack">
             {showSteps && (
-                <div className="howto">
-                    <div className="howto-item"><span className="howto-n">1</span><span>In Telegram, open <b>@BotFather</b> and send <span className="kbd">/newbot</span>. Pick any name.</span></div>
-                    <div className="howto-item"><span className="howto-n">2</span><span>Copy the <b>token</b> it gives you and paste it below.</span></div>
-                    <div className="howto-item"><span className="howto-n">3</span><span>Open your new bot, press <b>Start</b>, then click <b>Detect</b>.</span></div>
+                <div className="steps-list">
+                    <div className="step-item"><span className="step-n">1</span><span>In Telegram, open <b>@BotFather</b> and send <span className="chip">/newbot</span>. Pick any name.</span></div>
+                    <div className="step-item"><span className="step-n">2</span><span>Copy the <b>token</b> it gives you and paste it below.</span></div>
+                    <div className="step-item"><span className="step-n">3</span><span>Open your new bot, press <b>Start</b>, then click <b>Detect</b>.</span></div>
                 </div>
             )}
 
             <div className="field">
                 <label>Bot token</label>
-                <div className="input-wrap">
+                <div className="input-row">
                     <input
                         className="input"
                         type={reveal ? 'text' : 'password'}
@@ -63,10 +63,10 @@ export default function TelegramSetup({ onLinked, showSteps = true }: Props) {
                         placeholder="123456789:AAH…"
                         spellCheck={false}
                     />
-                    <button className="btn btn-secondary" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>
+                    <button className="key" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>
                         {reveal ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
-                    <button className="btn btn-primary" onClick={detect} disabled={busy || token.trim().length < 20}>
+                    <button className="key go" onClick={detect} disabled={busy || token.trim().length < 20}>
                         {busy ? <LoaderCircle size={16} className="spin" /> : null}
                         {busy ? 'Detecting…' : linked ? 'Re-detect' : 'Detect'}
                     </button>

@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function AddRulesToProject():Promise<string>;
 
+export function AnswerQuestion(arg1:string,arg2:string):Promise<boolean>;
+
 export function AutoCheckForUpdates():Promise<void>;
 
 export function CheckForUpdates():Promise<string>;
@@ -79,6 +81,8 @@ export function SaveWhatsApp(arg1:string,arg2:string,arg3:string):Promise<string
 export function SendTestQuestion():Promise<string>;
 
 export function SetAtDesk(arg1:boolean):Promise<string>;
+
+export function SetPopUp(arg1:boolean):Promise<string>;
 
 export function ShowWindow():Promise<void>;
 

@@ -3,25 +3,25 @@ import { BrandLogo } from '../lib';
 export type ChannelId = 'telegram' | 'slack' | 'discord' | 'ntfy' | 'whatsapp';
 
 export const CHANNELS: { id: ChannelId; name: string; note: string }[] = [
-    { id: 'telegram', name: 'Telegram', note: 'Recommended · 1 min' },
-    { id: 'slack', name: 'Slack', note: 'For work · 3 min' },
-    { id: 'discord', name: 'Discord', note: 'Popular with devs · 3 min' },
-    { id: 'ntfy', name: 'ntfy', note: 'No account · any country' },
-    { id: 'whatsapp', name: 'WhatsApp', note: 'Basic · needs ngrok' },
+    { id: 'telegram', name: 'Telegram', note: 'recommended · 1 min' },
+    { id: 'slack', name: 'Slack', note: 'for work · 3 min' },
+    { id: 'discord', name: 'Discord', note: 'devs · 3 min' },
+    { id: 'ntfy', name: 'ntfy', note: 'no account' },
+    { id: 'whatsapp', name: 'WhatsApp', note: 'basic · ngrok' },
 ];
 
-/** Segmented choice of where questions go, with each app's real logo. */
+/** Channels as cartridges you slot into the pager; the active one has a lit LED. */
 export default function ChannelPicker({ value, onChange, active }: { value: ChannelId; onChange: (c: ChannelId) => void; active?: string }) {
     return (
-        <div className="channel-picker">
+        <div className="carts">
             {CHANNELS.map(c => (
-                <button key={c.id} className={value === c.id ? 'on' : ''} onClick={() => onChange(c.id)}>
-                    <BrandLogo name={c.id} size={22} />
-                    <span className="grow" style={{ textAlign: 'left' }}>
+                <button key={c.id} className={`cart ${value === c.id ? 'on' : ''}`} onClick={() => onChange(c.id)}>
+                    <span className="logo"><BrandLogo name={c.id} size={20} /></span>
+                    <span className="grow">
                         <b>{c.name}</b>
-                        <span>{active === c.id ? 'Active now' : c.note}</span>
+                        <span className="note">{active === c.id ? 'active now' : c.note}</span>
                     </span>
-                    {active === c.id && <span className="dot ok" />}
+                    {active === c.id && <span className="led on" />}
                 </button>
             ))}
         </div>

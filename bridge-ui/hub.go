@@ -599,6 +599,19 @@ func (h *Hub) noteActivity(q *pendingQuestion) {
 	}
 }
 
+// AnswerFromPC answers a waiting question from the desktop app itself.
+func (h *Hub) AnswerFromPC(id, answer string) bool {
+	answer = strings.TrimSpace(answer)
+	h.mu.Lock()
+	q := h.questions[id]
+	ok := q != nil && answer != "" && h.finishLocked(q, stateAnswered, answer)
+	h.mu.Unlock()
+	if ok {
+		h.log("📥 [%s] answered on this PC: %s", orDash(sourceLabel(q)), answer)
+	}
+	return ok
+}
+
 func (h *Hub) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	h.mu.Lock()

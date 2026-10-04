@@ -191,14 +191,17 @@ func runWailsUI() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:     "Momentum",
-		Width:     1100,
-		Height:    700,
-		MinWidth:  900,
-		MinHeight: 600,
+		Width:     1020,
+		Height:    680,
+		MinWidth:  860,
+		MinHeight: 580,
+		// The pager draws its own title bar; Windows still gives it a shadow,
+		// rounded corners and resize borders.
+		Frameless: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 15, G: 23, B: 42, A: 1},
+		BackgroundColour: &options.RGBA{R: 231, G: 228, B: 220, A: 1},
 		OnStartup:        app.startup,
 		OnBeforeClose:    app.beforeClose,
 		Bind: []interface{}{
@@ -209,7 +212,7 @@ func runWailsUI() {
 			WindowIsTranslucent:               false,
 			DisableWindowIcon:                 false,
 			DisableFramelessWindowDecorations: false,
-			Theme:                             windows.Dark,
+			Theme:                             windows.Light,
 		},
 	})
 

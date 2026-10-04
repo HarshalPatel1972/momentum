@@ -6,6 +6,10 @@ export function AddRulesToProject() {
   return window['go']['main']['App']['AddRulesToProject']();
 }
 
+export function AnswerQuestion(arg1, arg2) {
+  return window['go']['main']['App']['AnswerQuestion'](arg1, arg2);
+}
+
 export function AutoCheckForUpdates() {
   return window['go']['main']['App']['AutoCheckForUpdates']();
 }
@@ -156,6 +160,10 @@ export function SendTestQuestion() {
 
 export function SetAtDesk(arg1) {
   return window['go']['main']['App']['SetAtDesk'](arg1);
+}
+
+export function SetPopUp(arg1) {
+  return window['go']['main']['App']['SetPopUp'](arg1);
 }
 
 export function ShowWindow() {

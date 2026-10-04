@@ -14,6 +14,7 @@ export interface AppState {
     discordUser: string;
     running: boolean;
     atDesk: boolean;
+    popUp: boolean;
     idesLinked: number;
     idesFound: number;
     dataDir: string;
@@ -81,6 +82,10 @@ export const api = {
     openURL: (u: string) => Go.OpenURL(u),
     openData: () => Go.OpenDataFolder(),
     quit: () => Go.QuitApp(),
+    answer: (id: string, answer: string) => Go.AnswerQuestion(id, answer),
+    setPopUp: (on: boolean) => Go.SetPopUp(on),
+    hide: () => Go.HideWindow(),
+    show: () => Go.ShowWindow(),
 };
 
 export const REPO_URL = 'https://github.com/HarshalPatel1972/momentum';
@@ -101,40 +106,61 @@ export function duration(from?: string, to?: string): string {
     return s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
 }
 
-/** The Momentum mark: a play arrow in motion, plus the green "ping" that reaches your phone.
- *  Same artwork as docs/logo.svg and the app/tray icon. Unique gradient id per instance. */
-export function Logo({ size = 32, ping = true }: { size?: number; ping?: boolean }) {
+/** The Momentum mark: a pager with a green LCD and an orange LED.
+ *  Same artwork as docs/logo.svg and the app/tray icon. Unique ids per instance. */
+export function Logo({ size = 32 }: { size?: number }) {
     const id = useId().replace(/:/g, '');
     return (
         <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
             <defs>
-                <linearGradient id={`g${id}`} x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#7c5cff" />
-                    <stop offset=".55" stopColor="#5b7cff" />
-                    <stop offset="1" stopColor="#2fb6ff" />
-                </linearGradient>
+                <linearGradient id={`b${id}`} x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stopColor="#3a3834" /><stop offset="1" stopColor="#161513" /></linearGradient>
+                <linearGradient id={`l${id}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#cfe58f" /><stop offset="1" stopColor="#8fae50" /></linearGradient>
+                <radialGradient id={`g${id}`}><stop offset="0" stopColor="#ff5a1f" stopOpacity=".55" /><stop offset="1" stopColor="#ff5a1f" stopOpacity="0" /></radialGradient>
             </defs>
-            <rect width="64" height="64" rx="15" fill={`url(#g${id})`} />
-            <rect x="10" y="25" width="10" height="4.4" rx="2.2" fill="#fff" opacity=".45" />
-            <rect x="6.5" y="31" width="13.5" height="4.4" rx="2.2" fill="#fff" opacity=".75" />
-            <rect x="10" y="37" width="10" height="4.4" rx="2.2" fill="#fff" opacity=".45" />
-            <path d="M25 20.5c0-2.5 2.7-4 4.8-2.7l17.4 10.8c2 1.3 2 4.2 0 5.5L29.8 44.9C27.7 46.2 25 44.7 25 42.2z" fill="#fff" />
-            {ping && <circle cx="51" cy="13" r="5.2" fill="#3ddc97" stroke="#6a6dff" strokeWidth="2.6" />}
+            <rect x="2" y="6" width="60" height="52" rx="14" fill={`url(#b${id})`} />
+            <rect x="2.6" y="6.6" width="58.8" height="50.8" rx="13.4" fill="none" stroke="#5a5750" strokeWidth="1.2" strokeOpacity=".7" />
+            <rect x="9" y="13" width="46" height="23" rx="4.5" fill={`url(#l${id})`} />
+            <rect x="14" y="19" width="22" height="4" rx="1" fill="#1f2a10" />
+            <rect x="14" y="26" width="14" height="4" rx="1" fill="#1f2a10" opacity=".75" />
+            <rect x="31" y="26" width="5" height="4" rx="1" fill="#1f2a10" opacity=".75" />
+            <circle cx="49" cy="47" r="9" fill={`url(#g${id})`} />
+            <circle cx="49" cy="47" r="4.6" fill="#ff5a1f" />
+            <rect x="11" y="43.5" width="10" height="7" rx="2.5" fill="#4a4842" />
+            <rect x="24" y="43.5" width="10" height="7" rx="2.5" fill="#4a4842" />
         </svg>
     );
 }
 
-export function Brand({ size = 30 }: { size?: number }) {
+export function Brand({ size = 26 }: { size?: number }) {
     return (
-        <div className="brand">
+        <div className="row" style={{ gap: 9 }}>
             <Logo size={size} />
-            <span className="brand-name">Momentum</span>
+            <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-.02em' }}>Momentum</span>
         </div>
     );
 }
 
-export function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-    return <button className={`toggle ${on ? 'on' : ''}`} role="switch" aria-checked={on} disabled={disabled} onClick={() => onChange(!on)} />;
+/** The pager's slide switch. Left label = "on" side. */
+export function Slide({ on, onChange, left = 'ON', right = 'OFF', small }: { on: boolean; onChange: (v: boolean) => void; left?: string; right?: string; small?: boolean }) {
+    return (
+        <div className={`slide ${small ? 'sm' : ''}`} role="switch" aria-checked={on}>
+            <button className={on ? 'on' : ''} onClick={() => onChange(true)}>{left}</button>
+            <button className={!on ? 'on' : ''} onClick={() => onChange(false)}>{right}</button>
+            <span className={`knob ${on ? '' : 'right'}`} style={{ left: on ? 4 : '50%' }} />
+        </div>
+    );
+}
+
+/** Short clock time, e.g. "21:42". */
+export function clock(iso?: string): string {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/** "0:42" since a time. */
+export function since(iso: string, now: number): string {
+    const s = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 // Official logos (see assets/logos/README.md for sources and licenses).
@@ -150,7 +176,7 @@ export function BrandLogo({ name, size = 18 }: { name: string; size?: number }) 
 
 /** IDE logo on a neutral tile, so every brand sits on the same footing. */
 export function IdeTile({ id }: { id: string }) {
-    return <div className="ide-logo"><BrandLogo name={id} size={20} /></div>;
+    return <div className="ide-tile"><BrandLogo name={id} size={20} /></div>;
 }
 
 export function TelegramIcon({ size = 18 }: { size?: number }) {

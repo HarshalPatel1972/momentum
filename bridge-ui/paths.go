@@ -35,6 +35,9 @@ type BridgeConfig struct {
 	TimeoutMinutes int            `json:"timeoutMinutes,omitempty"`
 	// AtDesk turns Away mode off: agents are told to ask in chat instead of on the phone.
 	AtDesk bool `json:"atDesk,omitempty"`
+	// NoPopUp stops the mini pager popping up on screen when a page arrives
+	// while the window is closed.
+	NoPopUp bool `json:"noPopUp,omitempty"`
 }
 
 type TelegramConfig struct {

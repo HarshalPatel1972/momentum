@@ -44,28 +44,28 @@ export default function DiscordSetup({ onLinked }: { onLinked?: () => void }) {
 
     return (
         <div className="stack">
-            <div className="howto">
-                <div className="howto-item"><span className="howto-n">1</span>
+            <div className="steps-list">
+                <div className="step-item"><span className="step-n">1</span>
                     <span>
                         In the Discord Developer Portal, create an application (name it <b>Momentum</b>), open <b>Bot</b> → <b>Reset Token</b>, and copy it.
                         <span className="row" style={{ marginTop: 8 }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => api.openURL('https://discord.com/developers/applications')}><BrandLogo name="discord" size={14} /> Open Developer Portal <ExternalLink size={12} /></button>
+                            <button className="key sm" onClick={() => api.openURL('https://discord.com/developers/applications')}><BrandLogo name="discord" size={14} /> Open Developer Portal <ExternalLink size={12} /></button>
                         </span>
                     </span>
                 </div>
-                <div className="howto-item"><span className="howto-n">2</span><span>Paste the token below, then add the bot to any server you're in (Discord only lets you DM bots you share a server with). It asks for no permissions.</span></div>
-                <div className="howto-item"><span className="howto-n">3</span><span>Click <b>Detect</b>, then in Discord click the bot's name and send it any DM.</span></div>
+                <div className="step-item"><span className="step-n">2</span><span>Paste the token below, then add the bot to any server you're in (Discord only lets you DM bots you share a server with). It asks for no permissions.</span></div>
+                <div className="step-item"><span className="step-n">3</span><span>Click <b>Detect</b>, then in Discord click the bot's name and send it any DM.</span></div>
             </div>
 
             <div className="field">
                 <label>Bot token</label>
-                <div className="input-wrap">
+                <div className="input-row">
                     <input className="input" type={reveal ? 'text' : 'password'} value={token} onChange={e => { setToken(e.target.value); setError(''); }} placeholder="MTEy…" spellCheck={false} />
-                    <button className="btn btn-secondary" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>{reveal ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                    <button className="key" onClick={() => setReveal(!reveal)} title={reveal ? 'Hide' : 'Show'}>{reveal ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
                 <div className="row" style={{ marginTop: 4 }}>
-                    <button className="btn btn-secondary btn-sm" onClick={invite} disabled={!hasToken}>Add bot to a server <ExternalLink size={12} /></button>
-                    <button className="btn btn-primary btn-sm" onClick={detect} disabled={busy || !hasToken}>
+                    <button className="key sm" onClick={invite} disabled={!hasToken}>Add bot to a server <ExternalLink size={12} /></button>
+                    <button className="key go sm" onClick={detect} disabled={busy || !hasToken}>
                         {busy && <LoaderCircle size={14} className="spin" />}
                         {busy ? 'Waiting for your DM…' : linked ? 'Re-detect' : 'Detect'}
                     </button>
