@@ -14,7 +14,7 @@ import (
 )
 
 // Version is the single source of truth for the app version (updater, MCP server, hub health).
-const Version = "1.1.0"
+const Version = "2.0.0"
 
 // defaultHubPort is the fixed localhost port the hub listens on, so every IDE's
 // MCP process can find it. Override with MOMENTUM_PORT.
