@@ -58,6 +58,11 @@ That's the only account you need. No ngrok, no port forwarding.
 
 From then on Momentum starts by itself and lives in the tray.
 
+#### The pager on your desktop
+- **Answer from your PC too:** a waiting page shows on the pager's screen. Press <kbd>Enter</kbd> for the first option, <kbd>Esc</kbd> for the second, or <kbd>R</kbd> to type a reply. The message on your phone updates to match.
+- **Mini pager** (<kbd>Ctrl</kbd>+<kbd>M</kbd>): shrinks Momentum into an always-on-top pager in the corner of your screen. If a page arrives while the window is closed, the mini pager pops up so you can answer right there (turn this off in Settings). Start straight into it with `Momentum.exe --mini`.
+- **Shortcuts:** <kbd>Ctrl</kbd>+<kbd>1</kbd>–<kbd>4</kbd> switch between Home, Log, IDEs and Link; <kbd>Ctrl</kbd>+<kbd>,</kbd> opens Settings.
+
 #### Away mode
 The switch on Momentum's home screen decides where questions go:
 - **Away mode on:** questions go to your phone.

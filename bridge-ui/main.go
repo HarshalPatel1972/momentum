@@ -37,6 +37,7 @@ func main() {
 	ideSnippet := flag.String("ide-snippet", "", "Print the config snippet for an IDE")
 	writeRules := flag.String("write-rules", "", "Add Momentum instructions to AGENTS.md (and CLAUDE.md/GEMINI.md if present) in this folder")
 	status := flag.Bool("status", false, "Show whether the hub is running")
+	startMini := flag.Bool("mini", false, "Start as the mini pager in the corner of the screen")
 	flag.Parse()
 
 	switch {
@@ -48,7 +49,7 @@ func main() {
 		attachParentConsole()
 		os.Exit(runCLI(*ideList, *ideConnect, *ideDisconnect, *ideSnippet, *writeRules, *status))
 	default:
-		runWailsUI()
+		runWailsUI(*startMini)
 	}
 }
 
@@ -181,9 +182,10 @@ func runDaemon() {
 	hub.Stop()
 }
 
-func runWailsUI() {
+func runWailsUI(startMini bool) {
 	// Create an instance of the app structure
 	app = NewApp()
+	app.startMini = startMini
 
 	// Run systray in a goroutine (it has its own event loop)
 	go systray.Run(onSystrayReady, onSystrayExit)

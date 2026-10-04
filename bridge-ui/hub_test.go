@@ -648,3 +648,35 @@ func TestQuestionClosesWhenAgentStopsWaiting(t *testing.T) {
 	}
 	t.Errorf("activity = %+v", ReadActivity())
 }
+
+// The pager's keys answer from the PC; the phone message is closed too.
+func TestAnswerFromPC(t *testing.T) {
+	h, tg := startTestHub(t, telegramCfg())
+	done := askAsync(askRequest{Question: "Ship it?", Options: []string{"Ship", "Hold"}})
+	m := tg.waitQuestion(t, 0)
+	var id string
+	deadline := time.Now().Add(3 * time.Second)
+	for id == "" && time.Now().Before(deadline) {
+		for _, a := range ReadActivity() {
+			if a.State == stateWaiting {
+				id = a.ID
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !h.AnswerFromPC(id, "Hold") {
+		t.Fatal("answering from the PC failed")
+	}
+	if h.AnswerFromPC(id, "Ship") {
+		t.Error("a second answer must be refused")
+	}
+	if r := await(t, done); r.Answer != "Hold" {
+		t.Fatalf("agent got %+v", r)
+	}
+	if e := tg.waitEdit(t, m.ID); !strings.Contains(e, "Answered: Hold") {
+		t.Errorf("phone message not closed: %s", e)
+	}
+	if h.AnswerFromPC("nope", "x") {
+		t.Error("unknown question must be refused")
+	}
+}

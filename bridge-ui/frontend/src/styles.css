@@ -374,3 +374,7 @@ kbd {
 .mini .lcd { min-width: 0; }
 .mini .lcd .lcd-main { font-size: 15px; overflow-wrap: anywhere; }
 .mini .device-keys .key .hint { display: none; }
+
+body.mini-mode { background: var(--dev-2); }
+body.mini-mode .mini { padding: 0; }
+body.mini-mode .mini .device { border-radius: 8px; box-shadow: 0 2px 0 var(--dev-line) inset; }

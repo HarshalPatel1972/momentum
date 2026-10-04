@@ -86,6 +86,7 @@ export const api = {
     setPopUp: (on: boolean) => Go.SetPopUp(on),
     hide: () => Go.HideWindow(),
     show: () => Go.ShowWindow(),
+    startsMini: () => Go.StartsMini(),
 };
 
 export const REPO_URL = 'https://github.com/HarshalPatel1972/momentum';

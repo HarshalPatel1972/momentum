@@ -174,6 +174,10 @@ export function StartBridge() {
   return window['go']['main']['App']['StartBridge']();
 }
 
+export function StartsMini() {
+  return window['go']['main']['App']['StartsMini']();
+}
+
 export function StopBridge() {
   return window['go']['main']['App']['StopBridge']();
 }

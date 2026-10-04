@@ -19,6 +19,7 @@ type App struct {
 	ctx         context.Context
 	wantsToQuit bool
 	hidden      bool // window closed to the tray
+	startMini   bool // started with --mini
 	hub         *Hub
 }
 
@@ -81,6 +82,9 @@ func (a *App) HideWindow() {
 	a.hidden = true
 	runtime.WindowHide(a.ctx)
 }
+
+// StartsMini reports whether the app was launched with --mini.
+func (a *App) StartsMini() bool { return a.startMini }
 
 // AnswerQuestion answers a waiting question from the app (the pager's keys).
 func (a *App) AnswerQuestion(id, answer string) bool {

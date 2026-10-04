@@ -88,4 +88,6 @@ export function ShowWindow():Promise<void>;
 
 export function StartBridge():Promise<string>;
 
+export function StartsMini():Promise<boolean>;
+
 export function StopBridge():Promise<string>;

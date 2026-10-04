@@ -48,9 +48,14 @@ export default function App() {
         WindowSetSize(MINI.w, MINI.h);
         const screens = await ScreenGetAll();
         const s = screens.find(x => x.isCurrent) || screens.find(x => x.isPrimary) || screens[0];
-        if (s) WindowSetPosition(s.width - MINI.w - 18, s.height - MINI.h - 64);
-        WindowSetAlwaysOnTop(true);
+        // Screen size and window position are in physical pixels; our sizes are
+        // logical, so scale them by the display's DPI (e.g. 1.25 at 125%).
+        const dpr = window.devicePixelRatio || 1;
+        if (s) WindowSetPosition(Math.round(s.width - (MINI.w + 18) * dpr), Math.round(s.height - (MINI.h + 64) * dpr));
         setMini(true);
+        // Apply "always on top" once the resize has settled, or Windows may drop it.
+        WindowSetAlwaysOnTop(true);
+        setTimeout(() => WindowSetAlwaysOnTop(true), 400);
     }, []);
 
     const exitMini = useCallback(async () => {
@@ -73,6 +78,7 @@ export default function App() {
             if ([...PAGES.map(p => p.id), 'about'].includes(hash as Page)) setPage(hash as Page);
             setMode(s.configured ? 'main' : 'welcome');
             if (hash === 'mini') setMini(true);
+            else if (s.configured) api.startsMini().then(m => { if (m) enterMini(); });
         });
         const offs = [
             EventsOn('activity', () => api.activity().then(a => setActivity(a || []))),
@@ -80,7 +86,10 @@ export default function App() {
         ];
         const poll = window.setInterval(refresh, 8000);
         return () => { offs.forEach(off => off()); window.clearInterval(poll); };
-    }, [refresh]);
+    }, [refresh, enterMini]);
+
+    // The mini pager window is all device: no light frame around it.
+    useEffect(() => { document.body.classList.toggle('mini-mode', mini); }, [mini]);
 
     // A page arrived while the window was closed: pop up the mini pager.
     useEffect(() => EventsOn('popup', async () => {
