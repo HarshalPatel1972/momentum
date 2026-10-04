@@ -1,7 +1,7 @@
 # Momentum 🚀
 **Keep your AI Agent moving.**
 
-Momentum acts as a bridge between your AI Agent (Cursor, Windsurf, Copilot) and your phone. When the AI needs permission to delete a file or execute a command, it pings your phone. You tap "Approve," and it continues instantly.
+Momentum acts as a bridge between your AI agent (VS Code, Cursor, Windsurf, Antigravity, Claude, Codex and any other MCP client) and your phone. When the AI needs permission to delete a file or execute a command, it pings your phone. You tap "Approve," and it continues instantly.
 
 ### 📥 Download
 
@@ -32,105 +32,111 @@ Momentum acts as a bridge between your AI Agent (Cursor, Windsurf, Copilot) and 
 2. Double-click to run
    * *Note: If Windows Defender says "Windows protected your PC", click **More info** → **Run anyway**.*
 
-#### Step 2: Get Your Free Telegram Keys
-You need a bot to talk to you. It's free and takes 1 minute.
-1. Open Telegram and search for **@BotFather**.
-2. Send the message: `/newbot`
-3. Name it (e.g., `MyAgentBridge_Bot`).
-4. **Copy the API Token** it gives you (looks like `123456:ABC-DEF...`).
-5. Now, search for **@userinfobot** and click Start.
-6. **Copy your Id** (looks like `123456789`).
+#### Step 2: Create your Telegram bot (1 minute, free)
+1. In Telegram, open **@BotFather** and send `/newbot`.
+2. Pick a name (e.g. `MyAgentBridge_Bot`) and **copy the token** it gives you (looks like `123456:ABC-DEF...`).
+3. Open your new bot and press **Start**.
 
-#### Step 3: Connect
-1. Open **Momentum**.
-2. Click **Add New Channel**.
-3. Select **Telegram**.
-4. Paste your **Bot Token** and **Chat ID**.
-5. Click **Start Bridge**.
+That's the only account you need. No ngrok, no port forwarding.
 
-#### Step 4: Hook up your Agent
-**For VS Code / Cursor / Windsurf:**
+#### Step 3: Run the 3-step setup in Momentum
+1. **Link your phone:** paste the bot token and click **Detect**. Momentum finds your chat and sends a "linked" message to confirm.
+2. **Connect your IDEs:** click **Connect all**. Momentum finds the AI IDEs on your PC and adds itself to each one's MCP settings, keeping your other servers as they are. Restart (or reload) each IDE afterwards.
+3. **Try it for real:** send yourself a test question and tap the answer on your phone.
 
-1. **Create the config file** (if it doesn't exist):
-   - In your AI workspace, create a folder: `.vscode` 
-   - Inside it, create a file: `mcp.json`
-   - Full path will be: `YourProject/.vscode/mcp.json`
+From then on Momentum starts by itself and lives in the tray.
 
-2. **Add this config**:
-```json
-{
-  "servers": {
-    "remote-bridge": {
-      "type": "stdio",
-      "command": "REPLACE_WITH_YOUR_PATH_TO_MOMENTUM.exe",
-      "args": ["--mcp"]
-    }
-  }
-}
+#### Away mode
+The switch on Momentum's home screen decides where questions go:
+- **Away mode on:** questions go to your phone.
+- **Away mode off (at your desk):** agents are told to ask in the IDE chat as usual.
+
+The home screen also shows every question your agents asked and what you answered.
+
+#### IDE support
+
+The installer can also do this for you (the *"Connect Momentum to the AI IDEs found on this PC"* option).
+
+| IDE / agent | Setup | Config file Momentum edits |
+|---|---|---|
+| VS Code (Copilot) / Insiders | Automatic | `%APPDATA%\Code\User\mcp.json` |
+| Cursor | Automatic | `%USERPROFILE%\.cursor\mcp.json` |
+| Windsurf | Automatic | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` |
+| Antigravity | Automatic | `%USERPROFILE%\.gemini\antigravity\mcp_config.json` |
+| Claude Code | Automatic | via `claude mcp add-json` (or `~\.claude.json`) |
+| Claude Desktop | Automatic | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Codex | Automatic | `%USERPROFILE%\.codex\config.toml` |
+| Gemini CLI | Automatic | `%USERPROFILE%\.gemini\settings.json` |
+| Cline / Roo Code | Automatic | VS Code `globalStorage\…\settings\*.json` |
+| Kiro | Automatic | `%USERPROFILE%\.kiro\settings\mcp.json` |
+| Zed | Automatic* | `%APPDATA%\Zed\settings.json` |
+| JetBrains, anything else | Copy-paste | Momentum shows the JSON to paste |
+
+\* If a config file contains comments (common for Zed), Momentum won't rewrite it. It shows you the snippet to paste instead.
+
+Prefer the command line? These work from any terminal:
+
+```powershell
+Momentum.exe --ide-list                 # what's installed / connected
+Momentum.exe --ide-connect detected     # connect every IDE found (or: cursor, vscode, all ...)
+Momentum.exe --ide-disconnect all       # remove Momentum from every IDE
+Momentum.exe --ide-snippet jetbrains    # print the config to paste manually
+Momentum.exe --write-rules C:\path\to\project   # optional: add instructions to AGENTS.md
+Momentum.exe --status                   # is the bridge running?
 ```
 
-3. **Replace the path**:
-   - Right-click `Momentum.exe` → **"Copy as path"**
-   - Replace `REPLACE_WITH_YOUR_PATH_TO_MOMENTUM.exe` with the copied path
-   - Example: `"C:\\Users\\YourName\\Documents\\Momentum\\Momentum.exe"`
-   - **Important**: Use double backslashes `\\` in Windows paths
-
-4. **Restart your AI Agent** (VS Code/Cursor/Windsurf)
-
-**You're done!** Next time the AI asks a question, your phone will buzz.
+**You're done!** Next time the AI needs your OK, your phone will buzz.
 
 ---
 
 ### 🧪 Test It (30 Seconds)
 
-After setup, try asking your AI agent these **exact phrases**:
+Momentum tells every agent when to use it, so normally you don't have to mention it. To try it right away, ask your agent:
 
 ```
-"Use the ask_remote_human tool via Momentum to ask if I should create test.txt"
+"Ask me on my phone whether you should create test.txt, then do what I say"
 ```
 
-```
-"Call the ask_remote_human MCP tool to get my approval before deleting temp files"
-```
-
-```
-"Use Momentum's MCP tool to ask me on Telegram if you should proceed"
-```
-
-**Important:** Say "use the ask_remote_human tool" or "via Momentum" so the AI knows to send to your phone, not just ask you in chat.
-
-Your phone will buzz! Tap the button, choose Yes/No, and watch the AI continue instantly.
+Your phone will buzz. Tap an answer button right in Telegram (or reply to the message to type your own answer) and watch the agent continue.
 
 ---
 
 ## How It Works
 
 ```
-AI Agent (VS Code)
-    ↓
-MCP stdio protocol
-    ↓
-Momentum (--mcp mode)
-    ↓
-Ngrok Tunnel (HTTPS)
-    ↓
-Telegram Bot
-    ↓
-Your Phone (Interactive form)
-    ↓
-Response back to Agent
+ VS Code ─┐
+ Cursor ──┤  MCP (stdio)   ┌───────────────────────┐  question + buttons  ┌──────────┐
+ Windsurf ┼──────────────▶ │ Momentum hub (1 per   │ ───────────────────▶ │ Telegram │
+ Claude ──┤  each IDE runs │ PC: tray app or       │                      │ on your  │
+ Codex …──┘  Momentum --mcp│ background process)   │ ◀─────────────────── │ phone    │
+                           └───────────────────────┘   your tap / reply   └──────────┘
+                                  (outbound HTTPS only: nothing listens on the internet)
 ```
+
+- Each IDE starts its own small `Momentum.exe --mcp` process. These all hand their questions to **one shared hub** on `127.0.0.1`, so several IDEs can be open at the same time.
+- The hub sends each question to your Telegram bot with the options as **buttons**, and collects your tap by asking Telegram for updates. All connections go out from your PC, so it needs no tunnel, public URL or firewall change. After you answer, the message updates to show the answer and its buttons disappear.
+- Want to type instead? **Reply** to the question message. If only one question is open, any message you send answers it.
+- If the Momentum window isn't open, the hub starts by itself in the background (tray icon: *Momentum (background)*). Opening the app takes over from it.
+- Messages say which IDE and project is asking, e.g. *Cursor · my-app*.
+- The agent gets two tools: `ask_remote_human` (asks and waits) and `get_remote_answer`. Some clients (e.g. Claude Desktop) cancel tool calls after about 60 seconds. For those, Momentum returns a `request_id` before that limit and the agent keeps waiting with `get_remote_answer`, so your answer is never lost.
+- A question expires after 15 minutes. The agent is told to treat an unanswered question as **not approved**.
+
+### Privacy & security
+- Your question text goes through **Telegram** (or CallMeBot + an ngrok answer page for WhatsApp). Nothing is stored on any Momentum server; there isn't one.
+- Only your own chat can answer: button taps and messages from any other chat are ignored. Each question can be answered once.
+- With Telegram, nothing on your PC is reachable from the internet. The local API that IDEs talk to listens on `127.0.0.1` only and requires a per-user key.
+- Config lives in `%APPDATA%\Momentum\` and is shared by every IDE and every copy of `Momentum.exe`.
 
 ---
 
 ## Features
 
-✅ **Universal** - Works with any MCP-compatible agent  
-✅ **Secure** - Data never leaves your machine  
-✅ **Zero Config** - No complex servers  
-✅ **Lightweight** - Uses <15MB RAM  
-✅ **Beautiful UI** - Interactive HTML forms  
-✅ **Multi-Channel** - Telegram, WhatsApp, Discord support  
+✅ **Every MCP IDE** - VS Code, Cursor, Windsurf, Antigravity, Claude, Codex, Gemini CLI, Zed, Kiro, Cline, Roo, JetBrains…  
+✅ **One-click setup** - Detects your IDEs and edits their config safely (backups kept as `*.momentum.bak`)  
+✅ **Many IDEs at once** - One shared hub  
+✅ **Lightweight** - Single small exe  
+✅ **One-tap answers** - Buttons right in Telegram, or reply to type your own answer  
+✅ **Channels** - Telegram (recommended, no extra accounts), WhatsApp (via CallMeBot + ngrok)  
 
 ---
 
@@ -140,14 +146,23 @@ Response back to Agent
 - This is normal for new apps. Click "More info" → "Run anyway"
 
 **Not getting Telegram notifications?**
-- Make sure you've started a chat with your bot
-- Send any message to your bot first (e.g., `/start`)
-- Verify your Chat ID is correct
+- Open your bot in Telegram and press **Start**, then click **Detect** again in Momentum
+- Send `/start` to your bot: if Momentum is running it replies *"Momentum is connected"*
+- Check the log: `%APPDATA%\Momentum\momentum.log`
 
-**Agent doesn't connect via MCP?**
-- Check the path in mcp.json is correct
-- Use double backslashes in Windows paths (`C:\\Path\\To\\Momentum.exe`)
-- Restart your IDE after adding the MCP config
+**The IDE doesn't see the Momentum tools**
+- Open Momentum → **Connect your IDEs** and check the IDE shows *Connected*. If it says *Points to an old Momentum.exe* (you moved the exe), click **Repair**.
+- Restart or reload the IDE after connecting.
+- In VS Code, make sure the agent is in **Agent mode** and the `momentum` tools are enabled in the tools picker.
+
+**The agent asks in chat instead of on my phone**
+- Run `Momentum.exe --write-rules <your project folder>` (or use the button in the app) to add instructions to the project's `AGENTS.md`.
+
+**Buttons do nothing / "Conflict: terminated by other getUpdates request" in the log**
+- Only one program can read a Telegram bot's updates at a time. Use a bot dedicated to Momentum, not one another tool also uses.
+
+**WhatsApp: "ngrok tunnel failed" / ERR_NGROK_108**
+- The free ngrok plan allows one tunnel at a time. Close other ngrok programs. Momentum itself only ever opens one.
 
 ---
 

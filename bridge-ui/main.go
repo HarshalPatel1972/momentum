@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/getlantern/systray"
 	"github.com/wailsapp/wails/v2"
@@ -22,18 +27,158 @@ var icon []byte
 var app *App
 
 func main() {
-	// Parse command-line flags
-	mcpMode := flag.Bool("mcp", false, "Run as MCP stdio server (no UI)")
+	mcpMode := flag.Bool("mcp", false, "Run as an MCP stdio server (launched by your IDE)")
+	client := flag.String("client", "", "IDE id, set by the config Momentum writes (e.g. cursor)")
+	wait := flag.Int("wait", -1, "Seconds one tool call may block before returning a request_id (-1 = auto)")
+	daemon := flag.Bool("daemon", false, "Run the hub in the background without a window")
+	ideList := flag.Bool("ide-list", false, "List supported IDEs and whether Momentum is connected")
+	ideConnect := flag.String("ide-connect", "", "Connect Momentum to an IDE: <id>, 'detected' or 'all'")
+	ideDisconnect := flag.String("ide-disconnect", "", "Remove Momentum from an IDE: <id> or 'all'")
+	ideSnippet := flag.String("ide-snippet", "", "Print the config snippet for an IDE")
+	writeRules := flag.String("write-rules", "", "Add Momentum instructions to AGENTS.md (and CLAUDE.md/GEMINI.md if present) in this folder")
+	status := flag.Bool("status", false, "Show whether the hub is running")
 	flag.Parse()
 
-	// If --mcp flag is set, run MCP server instead of UI
-	if *mcpMode {
-		runMCPServer()
+	switch {
+	case *mcpMode:
+		runMCPServer(mcpOptions{Client: *client, WaitSeconds: *wait})
+	case *daemon:
+		runDaemon()
+	case *ideList, *ideConnect != "", *ideDisconnect != "", *ideSnippet != "", *writeRules != "", *status:
+		attachParentConsole()
+		os.Exit(runCLI(*ideList, *ideConnect, *ideDisconnect, *ideSnippet, *writeRules, *status))
+	default:
+		runWailsUI()
+	}
+}
+
+func runCLI(list bool, connect, disconnect, snippet, rules string, status bool) int {
+	code := 0
+	if status {
+		c := newHubClient()
+		h, err := c.health(context.Background())
+		if err != nil {
+			fmt.Println("Hub: not running (it starts automatically on the first question)")
+		} else {
+			b, _ := json.MarshalIndent(h, "", "  ")
+			fmt.Println(string(b))
+		}
+	}
+	targets := func(arg string) []ideDef {
+		var out []ideDef
+		for _, d := range ideDefs {
+			if d.Format == "manual" {
+				continue
+			}
+			if arg == "all" || d.ID == arg || (arg == "detected" && d.Detect()) {
+				out = append(out, d)
+			}
+		}
+		if len(out) == 0 && arg != "detected" {
+			fmt.Printf("Unknown IDE %q. Run --ide-list to see ids.\n", arg)
+			code = 2
+		}
+		return out
+	}
+	if connect != "" {
+		for _, d := range targets(connect) {
+			if err := ConnectIDE(d.ID); err != nil {
+				fmt.Printf("✗ %-20s %v\n", d.Name, err)
+				if err == errHasComments {
+					fmt.Println(ManualSnippet(d.ID))
+				}
+				code = 1
+			} else {
+				fmt.Printf("✓ %-20s %s\n", d.Name, d.Path())
+			}
+		}
+	}
+	if disconnect != "" {
+		for _, d := range targets(disconnect) {
+			if err := DisconnectIDE(d.ID); err != nil {
+				fmt.Printf("✗ %-20s %v\n", d.Name, err)
+				code = 1
+			} else {
+				fmt.Printf("✓ %-20s removed\n", d.Name)
+			}
+		}
+	}
+	if snippet != "" {
+		fmt.Println(ManualSnippet(snippet))
+	}
+	if rules != "" {
+		files, err := WriteProjectRules(rules)
+		for _, f := range files {
+			fmt.Println("✓ " + f)
+		}
+		if err != nil {
+			fmt.Println("✗ " + err.Error())
+			code = 1
+		}
+	}
+	if list {
+		for _, s := range ListIDEs() {
+			state := "not connected"
+			switch {
+			case s.Manual:
+				state = "manual setup (--ide-snippet " + s.ID + ")"
+			case s.Stale:
+				state = "connected to a different Momentum.exe — reconnect"
+			case s.Connected:
+				state = "connected"
+			case !s.Installed:
+				state = "not detected"
+			}
+			if s.Error != "" {
+				state += " (" + s.Error + ")"
+			}
+			fmt.Printf("%-16s %-20s %s\n", s.ID, s.Name, state)
+		}
+	}
+	return code
+}
+
+// runDaemon hosts the hub without a window. MCP clients start it on demand;
+// it shows a tray icon so the user can see it and quit it.
+func runDaemon() {
+	logf := newLogger("daemon")
+	cfg, err := loadConfig()
+	if err != nil {
+		logf("❌ " + err.Error())
+	}
+	hub := NewHub()
+	hub.AllowShutdown = true
+	hub.Logf = logf
+	if err := hub.Start(cfg); err != nil {
+		logf("ℹ️ " + err.Error() + "; exiting")
 		return
 	}
-
-	// Otherwise, run normal Wails UI
-	runWailsUI()
+	done := hub.Done
+	if os.Getenv("MOMENTUM_NO_TRAY") != "" {
+		<-done
+		return
+	}
+	go func() { <-done; systray.Quit() }()
+	systray.Run(func() {
+		systray.SetIcon(icon)
+		systray.SetTooltip("Momentum (background) - forwarding agent questions to your phone")
+		mOpen := systray.AddMenuItem("Open Momentum", "Open the Momentum window")
+		systray.AddSeparator()
+		mQuit := systray.AddMenuItem("Quit background hub", "Stop forwarding questions until an IDE needs it again")
+		go func() {
+			for {
+				select {
+				case <-mOpen.ClickedCh:
+					exe, _ := os.Executable()
+					exec.Command(exe).Start()
+				case <-mQuit.ClickedCh:
+					hub.Stop()
+					return
+				}
+			}
+		}()
+	}, nil)
+	hub.Stop()
 }
 
 func runWailsUI() {
@@ -140,4 +285,13 @@ func onSystrayReady() {
 
 func onSystrayExit() {
 	// Cleanup
+}
+
+// newLogger appends timestamped lines to momentum.log (shared by UI and daemon) and stderr.
+func newLogger(role string) func(string) {
+	return func(msg string) {
+		line := fmt.Sprintf("[%s %s] %s", nowStamp(), role, strings.TrimRight(msg, "\n"))
+		fmt.Fprintln(os.Stderr, line)
+		appendLog(line)
+	}
 }

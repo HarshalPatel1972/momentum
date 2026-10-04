@@ -3,288 +3,385 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
+// App is bound to the frontend; its exported methods are callable from JS.
 type App struct {
 	ctx         context.Context
-	mu          sync.Mutex
 	wantsToQuit bool
-	bridge      *BridgeService
+	hub         *Hub
 }
 
-// BridgeConfig represents the full configuration structure
-type BridgeConfig struct {
-	Channel    string         `json:"channel"`
-	Source     string         `json:"source"`
-	Telegram   TelegramConfig `json:"telegram"`
-	Gmail      GmailConfig    `json:"gmail"`
-	WhatsApp   WhatsAppConfig `json:"whatsapp"`
-	SMS        SMSConfig      `json:"sms"`
-	NgrokToken string         `json:"ngrokToken"`
-}
-
-type TelegramConfig struct {
-	BotToken string `json:"bot_token"`
-	ChatID   string `json:"chat_id"`
-}
-
-type GmailConfig struct {
-	Email       string `json:"email"`
-	AppPassword string `json:"app_password"`
-}
-
-type WhatsAppConfig struct {
-	APIKey string `json:"api_key"`
-	Phone  string `json:"phone"`
-}
-
-type SMSConfig struct {
-	TwilioSID   string `json:"twilio_sid"`
-	TwilioToken string `json:"twilio_token"`
-	From        string `json:"from"`
-	To          string `json:"to"`
-}
-
-// RecentChannel represents a recently configured channel
-type RecentChannel struct {
-	Name      string `json:"name"`       // "Telegram", "Discord", etc.
-	Icon      string `json:"icon"`       // Emoji or icon identifier
-	ConfigKey string `json:"config_key"` // For quick lookup ("telegram", "whatsapp", etc.)
-	LastUsed  string `json:"last_used"`  // ISO timestamp
-}
-
-// NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{
-		bridge: NewBridgeService(),
-	}
+	return &App{hub: NewHub()}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	a.bridge.SetContext(ctx)
-	
-	// Auto-kill any existing bridge/ngrok processes on startup
-	a.KillExistingBridges()
-	
-	// Check for updates in background (after 3 seconds)
-	a.AutoCheckForUpdates()
-}
-
-// getConfigPath returns the path to the config file
-func (a *App) getConfigPath() string {
-	exePath, err := os.Executable()
-	if err != nil {
-		return "bridge-config.json"
+	uiLog := newLogger("app")
+	a.hub.Logf = func(msg string) {
+		uiLog(msg)
+		runtime.EventsEmit(a.ctx, "log", msg)
 	}
-	return filepath.Join(filepath.Dir(exePath), "bridge-config.json")
+	a.hub.OnPublicURL = func(u string) { runtime.EventsEmit(a.ctx, "publicURL", u) }
+	a.hub.OnActivity = func(act Activity) { runtime.EventsEmit(a.ctx, "activity", act) }
+
+	// Once set up, Momentum just runs: no "start" button to forget.
+	if cfg, err := loadConfig(); err == nil && configProblem(cfg) == "" {
+		go func() {
+			if msg := a.StartBridge(); strings.HasPrefix(msg, "Error") {
+				a.hub.Logf("❌ " + msg)
+			}
+			runtime.EventsEmit(a.ctx, "state")
+		}()
+	}
+
+	a.AutoCheckForUpdates()
 }
 
 // beforeClose is called when the user clicks the window's X button.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	if a.wantsToQuit {
-		// Actually quitting - stop the bridge
-		a.StopBridge()
+		a.hub.Stop()
 		return false
 	}
-	// Just minimizing to tray
+	// Closing the window keeps Momentum running in the tray.
 	runtime.WindowHide(ctx)
 	return true
 }
 
-// ShowWindow brings the window back from the tray
 func (a *App) ShowWindow() {
 	runtime.WindowShow(a.ctx)
 	runtime.WindowSetAlwaysOnTop(a.ctx, true)
 	runtime.WindowSetAlwaysOnTop(a.ctx, false)
 }
 
-// HideWindow hides the window to system tray
-func (a *App) HideWindow() {
-	runtime.WindowHide(a.ctx)
-}
+func (a *App) HideWindow() { runtime.WindowHide(a.ctx) }
 
-// QuitApp sets the flag and performs a real quit
 func (a *App) QuitApp() {
-	// Stop bridge first
-	if a.bridge != nil {
-		a.bridge.Stop()
-	}
+	a.hub.Stop()
 	a.wantsToQuit = true
 	runtime.Quit(a.ctx)
 }
 
-// StartBridge loads config and starts the bridge service
-func (a *App) StartBridge() string {
-	// Stop() now properly kills ngrok, so we don't need to kill here
-	// Killing before start was causing race conditions
-	
-	configPath := a.getConfigPath()
+// ---------- state ----------
 
-	data, err := ioutil.ReadFile(configPath)
+type AppState struct {
+	Version     string `json:"version"`
+	Configured  bool   `json:"configured"`
+	Problem     string `json:"problem"`
+	Channel     string `json:"channel"`
+	ChatName    string `json:"chatName"`
+	BotUsername string `json:"botUsername"`
+	Running     bool   `json:"running"`
+	AtDesk      bool   `json:"atDesk"`
+	IDEsLinked  int    `json:"idesLinked"`
+	IDEsFound   int    `json:"idesFound"`
+	DataDir     string `json:"dataDir"`
+}
+
+// GetState summarises everything the dashboard shows.
+func (a *App) GetState() AppState {
+	cfg, _ := loadConfig()
+	st := AppState{
+		Version:     Version,
+		Problem:     configProblem(cfg),
+		Channel:     cfg.Channel,
+		ChatName:    cfg.Telegram.ChatName,
+		BotUsername: cfg.Telegram.BotUsername,
+		Running:     a.IsBridgeRunning(),
+		AtDesk:      cfg.AtDesk,
+		DataDir:     dataDir(),
+	}
+	st.Configured = st.Problem == ""
+	for _, s := range ListIDEs() {
+		if s.Manual {
+			continue
+		}
+		if s.Connected && !s.Stale {
+			st.IDEsLinked++
+		}
+		if s.Installed || s.Connected {
+			st.IDEsFound++
+		}
+	}
+	return st
+}
+
+// ---------- hub control ----------
+
+// StartBridge starts the hub inside the app. If a background hub (started
+// by an IDE) already holds the hub port, it is asked to hand over.
+func (a *App) StartBridge() string {
+	cfg, err := loadConfig()
 	if err != nil {
 		return fmt.Sprintf("Error loading config: %v", err)
 	}
-
-	var cfg BridgeConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return fmt.Sprintf("Error parsing config: %v", err)
+	if p := configProblem(cfg); p != "" {
+		return "Error: " + p
+	}
+	if a.hub.IsRunning() {
+		return "Bridge started successfully"
 	}
 
-	if cfg.NgrokToken == "" {
-		return "Error: Ngrok token not configured"
+	err = a.hub.Start(cfg)
+	if errors.Is(err, ErrHubBusy) {
+		c := newHubClient()
+		h, herr := c.health(context.Background())
+		if herr != nil || !h.Daemon {
+			return "Error: Momentum is already running in another window (or another program uses port " + fmt.Sprint(hubPort()) + ")"
+		}
+		a.hub.Logf("🔁 Taking over from the background hub...")
+		c.post(context.Background(), "/api/shutdown")
+		c.waitGone(5 * time.Second)
+		err = a.hub.Start(cfg)
 	}
-
-	if err := a.bridge.Start(cfg); err != nil {
+	if err != nil {
 		return fmt.Sprintf("Error starting bridge: %v", err)
 	}
-
 	return "Bridge started successfully"
 }
 
-// KillExistingBridges stops any running bridge or ngrok processes
-func (a *App) KillExistingBridges() {
-	// This will be implemented differently on Windows vs Unix
-	// For Windows, we use PowerShell to kill processes
-	// Note: This only kills OTHER processes, not the current app
-	exec.Command("powershell", "-Command", "Get-Process | Where-Object {$_.ProcessName -match 'bridge|ngrok' -and $_.Id -ne $PID} | Stop-Process -Force").Run()
-}
-
-// StopBridge stops the bridge service
+// StopBridge stops the hub, whether it runs in this window or in the background.
 func (a *App) StopBridge() string {
-	a.bridge.Stop()
+	if a.hub.IsRunning() {
+		a.hub.Stop()
+	} else {
+		newHubClient().post(context.Background(), "/api/shutdown")
+	}
 	return "Bridge stopped"
 }
 
-// IsBridgeRunning returns the bridge state
+// IsBridgeRunning reports whether any hub (this window's or a background one) is up.
 func (a *App) IsBridgeRunning() bool {
-	return a.bridge.IsRunning()
+	if a.hub.IsRunning() {
+		return true
+	}
+	h, err := newHubClient().health(context.Background())
+	return err == nil && h.App == "momentum"
 }
 
-// SaveConfig saves the configuration to disk
-func (a *App) SaveConfig(jsonConfig string) string {
-	configPath := a.getConfigPath()
-
-	var cfg BridgeConfig
-	if err := json.Unmarshal([]byte(jsonConfig), &cfg); err != nil {
-		return fmt.Sprintf("Error: Invalid JSON - %v", err)
+// GetPublicURL returns the tunnel URL of the running hub, if any (WhatsApp only).
+func (a *App) GetPublicURL() string {
+	if a.hub.IsRunning() {
+		return a.hub.PublicURL()
 	}
-
-	prettyJSON, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return fmt.Sprintf("Error: %v", err)
-	}
-
-	if err := ioutil.WriteFile(configPath, prettyJSON, 0644); err != nil {
-		return fmt.Sprintf("Error saving config: %v", err)
-	}
-
-	return "Configuration saved successfully!"
+	h, _ := newHubClient().health(context.Background())
+	return h.PublicURL
 }
 
-// LoadConfig loads the configuration from disk
+// applyConfig saves cfg and makes the running hub (or a new one) use it.
+func (a *App) applyConfig(cfg BridgeConfig) string {
+	if err := saveConfig(cfg); err != nil {
+		return "Error saving config: " + err.Error()
+	}
+	switch {
+	case a.hub.IsRunning():
+		a.hub.Reload(cfg)
+	case configProblem(cfg) == "":
+		if msg := a.StartBridge(); strings.HasPrefix(msg, "Error") {
+			return msg
+		}
+	}
+	runtime.EventsEmit(a.ctx, "state")
+	return ""
+}
+
+// SaveTelegram stores the Telegram channel and makes it active. Returns "" on success.
+func (a *App) SaveTelegram(token, chatID, chatName, botUsername string) string {
+	cfg, _ := loadConfig()
+	cfg.Channel = "telegram"
+	cfg.Telegram = TelegramConfig{
+		BotToken:    strings.TrimSpace(token),
+		ChatID:      strings.TrimSpace(chatID),
+		ChatName:    chatName,
+		BotUsername: botUsername,
+	}
+	if p := configProblem(cfg); p != "" {
+		return p
+	}
+	return a.applyConfig(cfg)
+}
+
+// SaveWhatsApp stores the WhatsApp (CallMeBot) channel and makes it active.
+func (a *App) SaveWhatsApp(apiKey, phone, ngrokToken string) string {
+	cfg, _ := loadConfig()
+	cfg.Channel = "whatsapp"
+	cfg.WhatsApp = WhatsAppConfig{APIKey: strings.TrimSpace(apiKey), Phone: strings.TrimSpace(phone)}
+	cfg.NgrokToken = strings.TrimSpace(ngrokToken)
+	if p := configProblem(cfg); p != "" {
+		return p
+	}
+	return a.applyConfig(cfg)
+}
+
+// SetAtDesk switches Away mode off (true) or on (false).
+func (a *App) SetAtDesk(atDesk bool) string {
+	cfg, _ := loadConfig()
+	cfg.AtDesk = atDesk
+	return a.applyConfig(cfg)
+}
+
+// GetTelegramSettings returns the saved Telegram fields for editing.
+func (a *App) GetTelegramSettings() TelegramConfig {
+	cfg, _ := loadConfig()
+	return cfg.Telegram
+}
+
+// GetWhatsAppSettings returns the saved WhatsApp fields and ngrok token for editing.
+func (a *App) GetWhatsAppSettings() map[string]string {
+	cfg, _ := loadConfig()
+	return map[string]string{"apiKey": cfg.WhatsApp.APIKey, "phone": cfg.WhatsApp.Phone, "ngrokToken": cfg.NgrokToken}
+}
+
+// DetectTelegramChat finds the chat that just messaged the bot (setup helper).
+func (a *App) DetectTelegramChat(token string) TelegramChat {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	// Only one process may poll a bot at a time. If our own hub is polling this
+	// bot it has already seen the message; a background hub is asked to exit.
+	if a.hub.IsRunning() {
+		a.hub.mu.Lock()
+		polling, last := strings.HasPrefix(a.hub.tgKey, strings.TrimSpace(token)+"|"), a.hub.lastTgChat
+		a.hub.mu.Unlock()
+		if polling && last.ID != "" {
+			tgSendText(ctx, TelegramConfig{BotToken: strings.TrimSpace(token), ChatID: last.ID},
+				"✅ Momentum is linked to this chat. Questions from your AI agents will appear here.", 0)
+			return last
+		}
+		if polling {
+			a.hub.Stop() // restarted when the settings are saved
+		}
+	} else if h, err := newHubClient().health(ctx); err == nil && h.Daemon {
+		c := newHubClient()
+		c.post(ctx, "/api/shutdown")
+		c.waitGone(5 * time.Second)
+	}
+	return DetectTelegramChat(ctx, token)
+}
+
+// SendTestQuestion sends a real question to the phone and waits for the answer.
+func (a *App) SendTestQuestion() string {
+	if msg := a.StartBridge(); strings.HasPrefix(msg, "Error") {
+		return msg
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	r, err := newHubClient().ask(ctx, askRequest{
+		Question: "This is a test from the Momentum app. Tap a button to confirm everything works.",
+		Options:  []string{"It works! 🎉", "Something's off"},
+		Client:   "Momentum",
+		Project:  "test",
+	})
+	switch {
+	case err != nil:
+		return "Error: " + err.Error()
+	case r.Status == statusAtDesk:
+		return "Error: Away mode is off, so questions stay on this PC. Turn Away mode on to test."
+	case r.Status == stateAnswered:
+		return r.Answer
+	case r.Error != "":
+		return "Error: " + r.Error
+	default:
+		return "Error: no answer (" + r.Status + ")"
+	}
+}
+
+// ---------- activity ----------
+
+func (a *App) GetActivity() []Activity { return ReadActivity() }
+
+func (a *App) ClearActivity() {
+	ClearActivity()
+	runtime.EventsEmit(a.ctx, "activity", nil)
+}
+
+// ---------- misc ----------
+
+func (a *App) OpenURL(url string) { runtime.BrowserOpenURL(a.ctx, url) }
+
+func (a *App) OpenDataFolder() { exec.Command("explorer", dataDir()).Start() }
+
+// LoadConfig returns the raw config (kept for compatibility with older screens).
 func (a *App) LoadConfig() string {
-	configPath := a.getConfigPath()
-
-	data, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		emptyConfig := BridgeConfig{}
-		jsonBytes, _ := json.Marshal(emptyConfig)
-		return string(jsonBytes)
-	}
-
-	return string(data)
+	cfg, _ := loadConfig()
+	b, _ := json.Marshal(cfg)
+	return string(b)
 }
 
-// ReadLogs returns the content of bridge.log
+// ReadLogs returns the last lines of momentum.log
 func (a *App) ReadLogs() []string {
-	exePath, _ := os.Executable()
-	logPath := filepath.Join(filepath.Dir(exePath), "bridge.log")
-
-	data, err := ioutil.ReadFile(logPath)
+	data, err := os.ReadFile(logPath())
 	if err != nil {
-		return []string{"Waiting for logs..."}
+		return []string{}
 	}
-
-	lines := strings.Split(string(data), "\n")
-	if len(lines) > 50 {
-		return lines[len(lines)-50:]
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	if len(lines) > 200 {
+		return lines[len(lines)-200:]
 	}
 	return lines
 }
 
-// getRecentsPath returns the path to the recents file
-func (a *App) getRecentsPath() string {
-	exePath, err := os.Executable()
-	if err != nil {
-		return "recents.json"
+// ---------- IDE integration ----------
+
+// ListIDEs returns every supported IDE with detection / connection status.
+func (a *App) ListIDEs() []IDEStatus { return ListIDEs() }
+
+// ConnectIDE writes Momentum into the IDE's MCP config. Returns "" on success.
+func (a *App) ConnectIDE(id string) string {
+	if err := ConnectIDE(id); err != nil {
+		return err.Error()
 	}
-	exeDir := filepath.Dir(exePath)
-	return filepath.Join(exeDir, "recents.json")
+	return ""
 }
 
-// GetRecentChannels returns recently configured channels
-func (a *App) GetRecentChannels() []RecentChannel {
-	data, err := ioutil.ReadFile(a.getRecentsPath())
-	if err != nil {
-		return []RecentChannel{}
-	}
-
-	var recents []RecentChannel
-	if err := json.Unmarshal(data, &recents); err != nil {
-		return []RecentChannel{}
-	}
-
-	// Return max 5 most recent
-	if len(recents) > 5 {
-		return recents[:5]
-	}
-	return recents
-}
-
-// AddRecentChannel adds a channel to recents (or updates if exists)
-func (a *App) AddRecentChannel(name, icon, configKey string) error {
-	recents := a.GetRecentChannels()
-	
-	// Check if already exists, remove if so
-	var filtered []RecentChannel
-	for _, r := range recents {
-		if r.ConfigKey != configKey {
-			filtered = append(filtered, r)
+// ConnectDetectedIDEs connects every IDE found on this PC; returns failures by name.
+func (a *App) ConnectDetectedIDEs() map[string]string {
+	failed := map[string]string{}
+	for _, s := range ListIDEs() {
+		if s.Manual || !(s.Installed || s.Connected) || (s.Connected && !s.Stale) {
+			continue
+		}
+		if err := ConnectIDE(s.ID); err != nil {
+			failed[s.Name] = err.Error()
 		}
 	}
-	
-	// Add new recent at the beginning
-	newRecent := RecentChannel{
-		Name:      name,
-		Icon:      icon,
-		ConfigKey: configKey,
-		LastUsed:  time.Now().Format(time.RFC3339),
+	return failed
+}
+
+// DisconnectIDE removes Momentum from the IDE's MCP config. Returns "" on success.
+func (a *App) DisconnectIDE(id string) string {
+	if err := DisconnectIDE(id); err != nil {
+		return err.Error()
 	}
-	
-	recents = append([]RecentChannel{newRecent}, filtered...)
-	
-	// Keep max 5
-	if len(recents) > 5 {
-		recents = recents[:5]
+	return ""
+}
+
+// GetIDESnippet returns the config to paste manually.
+func (a *App) GetIDESnippet(id string) string { return ManualSnippet(id) }
+
+// AddRulesToProject asks for a project folder and adds the Momentum block to its AGENTS.md.
+func (a *App) AddRulesToProject() string {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: "Choose a project folder"})
+	if err != nil || dir == "" {
+		return ""
 	}
-	
-	// Save to file
-	data, err := json.MarshalIndent(recents, "", "  ")
+	files, err := WriteProjectRules(dir)
 	if err != nil {
-		return err
+		return "Error: " + err.Error()
 	}
-	
-	return ioutil.WriteFile(a.getRecentsPath(), data, 0644)
+	names := make([]string, len(files))
+	for i, f := range files {
+		names[i] = filepath.Base(f)
+	}
+	return "Updated " + strings.Join(names, ", ") + " in " + filepath.Base(dir)
 }

@@ -1,10 +1,9 @@
 {
   "servers": {
-    "remote-bridge": {
+    "momentum": {
       "type": "stdio",
-      "command": "${workspaceFolder}/bridge-ui/build/bin/momentum.exe",
-      "args": ["--mcp"],
-      "timeout": 900000
+      "command": "${workspaceFolder}/bridge-ui/build/bin/Momentum.exe",
+      "args": ["--mcp", "--client", "vscode"]
     }
   }
 }
