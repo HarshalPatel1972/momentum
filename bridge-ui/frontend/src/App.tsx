@@ -88,7 +88,7 @@ export default function App() {
             </aside>
 
             <AnimatePresence mode="wait">
-                <motion.div key={page} style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}
+                <motion.div key={page} style={{ minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .18 }}>
                     {page === 'home' && <Home state={state} activity={activity} go={setPage} toast={toast} refresh={refresh} />}
                     {page === 'activity' && <ActivityPage activity={activity} toast={toast} />}
