@@ -67,6 +67,35 @@ func slackCall(ctx context.Context, token, method string, payload any, out any) 
 	return nil
 }
 
+// slackForm calls a read method with form parameters. Slack's read methods
+// (users.info, …) ignore JSON bodies, so they must be sent this way.
+func slackForm(ctx context.Context, token, method string, params url.Values, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, slackAPIBase()+"/"+method, strings.NewReader(params.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := slackHTTP.Do(req)
+	if err != nil {
+		return errors.New(redactToken(err.Error(), token))
+	}
+	defer resp.Body.Close()
+	var raw json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return fmt.Errorf("slack %s: %s", method, resp.Status)
+	}
+	var status struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	json.Unmarshal(raw, &status)
+	if !status.OK {
+		return fmt.Errorf("slack: %s", slackErrorText(status.Error))
+	}
+	return json.Unmarshal(raw, out)
+}
+
 // slackErrorText turns Slack's error codes into something a person can act on.
 func slackErrorText(code string) string {
 	switch code {
@@ -377,7 +406,7 @@ func DetectSlackUser(ctx context.Context, botToken, appToken string, wait time.D
 				} `json:"profile"`
 			} `json:"user"`
 		}
-		if slackCall(ctx, botToken, "users.info", map[string]any{"user": m.User}, &info) == nil {
+		if slackForm(ctx, botToken, "users.info", url.Values{"user": {m.User}}, &info) == nil {
 			if n := info.User.Profile.DisplayName; n != "" {
 				link.UserName = n
 			} else if info.User.RealName != "" {

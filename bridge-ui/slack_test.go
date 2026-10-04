@@ -71,7 +71,9 @@ func newFakeSlack(t *testing.T) *fakeSlack {
 		method := strings.TrimPrefix(r.URL.Path, "/api/")
 		tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		var p map[string]any
-		json.NewDecoder(r.Body).Decode(&p)
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+			json.NewDecoder(r.Body).Decode(&p)
+		}
 		reply := func(v map[string]any) { v["ok"] = true; json.NewEncoder(w).Encode(v) }
 		fail := func(code string) { json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": code}) }
 		if method == "apps.connections.open" {
@@ -93,6 +95,11 @@ func newFakeSlack(t *testing.T) *fakeSlack {
 		case "auth.test":
 			reply(map[string]any{"team": "Acme", "user_id": "UBOT"})
 		case "users.info":
+			// Like the real API: read methods take form parameters, not JSON.
+			if r.FormValue("user") != slackUser {
+				fail("user_not_found")
+				return
+			}
 			reply(map[string]any{"user": map[string]any{"real_name": "Harshal Patel", "profile": map[string]any{"display_name": "harshal"}}})
 		case "chat.postMessage":
 			f.mu.Lock()

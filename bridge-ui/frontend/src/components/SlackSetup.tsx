@@ -59,7 +59,7 @@ export default function SlackSetup({ onLinked }: { onLinked?: () => void }) {
                     </span>
                 </div>
                 <div className="step-item"><span className="step-n">2</span><span>Under <b>OAuth &amp; Permissions</b>, copy the <b>Bot User OAuth Token</b> (starts with <span className="chip">xoxb-</span>).</span></div>
-                <div className="step-item"><span className="step-n">3</span><span>Under <b>Basic Information → App-Level Tokens</b>, generate a token with the <span className="chip">connections:write</span> scope (starts with <span className="chip">xapp-</span>).</span></div>
+                <div className="step-item"><span className="step-n">3</span><span>Under <b>Basic Information</b>, skip "App Credentials" and scroll to <b>App-Level Tokens</b>. Generate a token with the <span className="chip">connections:write</span> scope (starts with <span className="chip">xapp-</span>).</span></div>
                 <div className="step-item"><span className="step-n">4</span><span>In Slack, open <b>Momentum</b> under Apps and send it any message. Then click <b>Detect</b>.</span></div>
             </div>
 
