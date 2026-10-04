@@ -31,13 +31,17 @@ SolidCompression=yes
 WizardStyle=modern
 
 ; Platform
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 
 ; Visual
 DisableProgramGroupPage=yes
 DisableWelcomePage=no
+
+; Upgrades: close a running Momentum (window, tray or background hub) first
+CloseApplications=force
+RestartApplications=no
 
 ; Uninstall
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -72,31 +76,3 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--ide-disconnect all"; Flags: ru
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\{#MyAppName}"
-
-[Code]
-function InitializeSetup(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  // Check if app is currently running
-  if CheckForMutexes('MomentumApp') then
-  begin
-    if MsgBox('Momentum is currently running. Please close it before continuing.', mbError, MB_OKCANCEL) = IDOK then
-    begin
-      Result := False;
-    end
-    else
-      Result := False;
-  end
-  else
-    Result := True;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep = ssPostInstall then
-  begin
-    // Create .vscode folder example in user's Documents
-    // Note: Actual implementation would go here if needed
-  end;
-end;
