@@ -8,7 +8,11 @@ bridge.exe
 mcp-adapter.exe
 
 # Build artifacts
-bridge-ui/build/
+bridge-ui/build/*
+!bridge-ui/build/windows/
+bridge-ui/build/windows/*
+# Embedded by main.go (tray + window icon), so it must be in the repo
+!bridge-ui/build/windows/icon.ico
 bridge-ui/frontend/dist/
 bridge-ui/frontend/node_modules/
 **/bin/
@@ -55,3 +59,6 @@ go.work
 
 # OS
 Thumbs.db
+
+# Inno Setup output (release builds)
+installer-output/

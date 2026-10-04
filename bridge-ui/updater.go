@@ -14,17 +14,16 @@ import (
 )
 
 const (
-	CurrentVersion = "1.0.0"
 	GitHubRepo     = "HarshalPatel1972/momentum"
 	UpdateCheckURL = "https://api.github.com/repos/" + GitHubRepo + "/releases/latest"
 )
 
 type GitHubRelease struct {
-	TagName    string `json:"tag_name"`
-	Name       string `json:"name"`
-	Body       string `json:"body"`
-	Assets     []Asset `json:"assets"`
-	HTMLURL    string `json:"html_url"`
+	TagName string  `json:"tag_name"`
+	Name    string  `json:"name"`
+	Body    string  `json:"body"`
+	Assets  []Asset `json:"assets"`
+	HTMLURL string  `json:"html_url"`
 }
 
 type Asset struct {
@@ -35,7 +34,7 @@ type Asset struct {
 // CheckForUpdates queries GitHub for the latest release
 func (a *App) CheckForUpdates() (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	
+
 	resp, err := client.Get(UpdateCheckURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to check for updates: %v", err)
@@ -53,8 +52,8 @@ func (a *App) CheckForUpdates() (string, error) {
 
 	// Remove 'v' prefix if present
 	latestVersion := strings.TrimPrefix(release.TagName, "v")
-	
-	if latestVersion != CurrentVersion {
+
+	if latestVersion != Version {
 		return latestVersion, nil
 	}
 
@@ -65,7 +64,7 @@ func (a *App) CheckForUpdates() (string, error) {
 func (a *App) DownloadUpdate(version string) error {
 	// Get latest release info
 	client := &http.Client{Timeout: 30 * time.Second}
-	
+
 	resp, err := client.Get(UpdateCheckURL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch update info: %v", err)
@@ -92,7 +91,7 @@ func (a *App) DownloadUpdate(version string) error {
 
 	// Download to temp location
 	tempPath := filepath.Join(os.TempDir(), "Momentum-update.exe")
-	
+
 	resp, err = client.Get(downloadURL)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %v", err)
@@ -128,7 +127,7 @@ func (a *App) applyUpdate(newExePath string) error {
 
 	// On Windows, we need to rename old exe and copy new one
 	oldPath := exePath + ".old"
-	
+
 	// Rename current exe
 	if err := os.Rename(exePath, oldPath); err != nil {
 		return fmt.Errorf("failed to rename old executable: %v", err)
@@ -200,7 +199,7 @@ del "%%~f0"
 
 	// App will be closed by the batch script
 	os.Exit(0)
-	
+
 	return nil
 }
 
