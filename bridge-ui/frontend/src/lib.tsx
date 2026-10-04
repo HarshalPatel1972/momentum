@@ -11,6 +11,7 @@ export interface AppState {
     botUsername: string;
     slackUser: string;
     slackTeam: string;
+    discordUser: string;
     running: boolean;
     atDesk: boolean;
     idesLinked: number;
@@ -43,6 +44,7 @@ export interface IDEStatus {
 }
 
 export interface TelegramChat { id: string; name: string; bot: string; error?: string; }
+export interface DiscordLink { userId: string; userName: string; channelId: string; bot: string; error?: string; }
 export interface SlackLink { userId: string; userName: string; channelId: string; team: string; error?: string; }
 
 // Typed views of the generated Wails bindings.
@@ -66,6 +68,13 @@ export const api = {
     saveSlack: (bot: string, app: string, link: SlackLink) => Go.SaveSlack(bot, app, link as any),
     openSlackSetup: () => Go.OpenSlackAppSetup(),
     slackManifest: () => Go.GetSlackManifest(),
+    discord: () => Go.GetDiscordSettings() as Promise<{ bot_token: string; user_id: string; user_name?: string; channel_id?: string }>,
+    discordInvite: (token: string) => Go.OpenDiscordInvite(token),
+    detectDiscord: (token: string) => Go.DetectDiscordUser(token) as Promise<DiscordLink>,
+    saveDiscord: (token: string, link: DiscordLink) => Go.SaveDiscord(token, link as any),
+    ntfy: () => Go.GetNtfySettings() as Promise<{ server: string; topic: string; token?: string }>,
+    saveNtfy: (server: string, topic: string, token: string) => Go.SaveNtfy(server, topic, token),
+    newNtfyTopic: () => Go.NewNtfyTopic(),
     setAtDesk: (v: boolean) => Go.SetAtDesk(v),
     sendTest: () => Go.SendTestQuestion(),
     logs: () => Go.ReadLogs() as Promise<string[]>,

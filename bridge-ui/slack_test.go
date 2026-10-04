@@ -262,7 +262,7 @@ func TestSlackButtonTapAnswers(t *testing.T) {
 	if r := await(t, done); r.Status != stateAnswered || r.Answer != "Deny" {
 		t.Fatalf("got %+v", r)
 	}
-	if u := sl.waitUpdate(t, p.TS); !strings.Contains(u, "Answered:* Deny") || strings.Contains(u, `"button"`) {
+	if u := sl.waitUpdate(t, p.TS); !strings.Contains(u, "Answered: Deny") || strings.Contains(u, `"button"`) {
 		t.Errorf("message not closed: %s", u)
 	}
 	sl.mu.Lock()

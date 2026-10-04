@@ -57,6 +57,7 @@ export namespace main {
 	    botUsername: string;
 	    slackUser: string;
 	    slackTeam: string;
+	    discordUser: string;
 	    running: boolean;
 	    atDesk: boolean;
 	    idesLinked: number;
@@ -77,11 +78,50 @@ export namespace main {
 	        this.botUsername = source["botUsername"];
 	        this.slackUser = source["slackUser"];
 	        this.slackTeam = source["slackTeam"];
+	        this.discordUser = source["discordUser"];
 	        this.running = source["running"];
 	        this.atDesk = source["atDesk"];
 	        this.idesLinked = source["idesLinked"];
 	        this.idesFound = source["idesFound"];
 	        this.dataDir = source["dataDir"];
+	    }
+	}
+	export class DiscordConfig {
+	    bot_token: string;
+	    user_id: string;
+	    user_name?: string;
+	    channel_id?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscordConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.bot_token = source["bot_token"];
+	        this.user_id = source["user_id"];
+	        this.user_name = source["user_name"];
+	        this.channel_id = source["channel_id"];
+	    }
+	}
+	export class DiscordLink {
+	    userId: string;
+	    userName: string;
+	    channelId: string;
+	    bot: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscordLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.userId = source["userId"];
+	        this.userName = source["userName"];
+	        this.channelId = source["channelId"];
+	        this.bot = source["bot"];
+	        this.error = source["error"];
 	    }
 	}
 	export class IDEStatus {
@@ -110,6 +150,22 @@ export namespace main {
 	        this.manual = source["manual"];
 	        this.note = source["note"];
 	        this.error = source["error"];
+	    }
+	}
+	export class NtfyConfig {
+	    server?: string;
+	    topic: string;
+	    token?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NtfyConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.server = source["server"];
+	        this.topic = source["topic"];
+	        this.token = source["token"];
 	    }
 	}
 	export class SlackConfig {

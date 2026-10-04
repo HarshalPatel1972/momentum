@@ -26,6 +26,10 @@ export function ConnectIDE(arg1) {
   return window['go']['main']['App']['ConnectIDE'](arg1);
 }
 
+export function DetectDiscordUser(arg1) {
+  return window['go']['main']['App']['DetectDiscordUser'](arg1);
+}
+
 export function DetectSlackUser(arg1, arg2) {
   return window['go']['main']['App']['DetectSlackUser'](arg1, arg2);
 }
@@ -46,8 +50,16 @@ export function GetActivity() {
   return window['go']['main']['App']['GetActivity']();
 }
 
+export function GetDiscordSettings() {
+  return window['go']['main']['App']['GetDiscordSettings']();
+}
+
 export function GetIDESnippet(arg1) {
   return window['go']['main']['App']['GetIDESnippet'](arg1);
+}
+
+export function GetNtfySettings() {
+  return window['go']['main']['App']['GetNtfySettings']();
 }
 
 export function GetPublicURL() {
@@ -90,8 +102,16 @@ export function LoadConfig() {
   return window['go']['main']['App']['LoadConfig']();
 }
 
+export function NewNtfyTopic() {
+  return window['go']['main']['App']['NewNtfyTopic']();
+}
+
 export function OpenDataFolder() {
   return window['go']['main']['App']['OpenDataFolder']();
+}
+
+export function OpenDiscordInvite(arg1) {
+  return window['go']['main']['App']['OpenDiscordInvite'](arg1);
 }
 
 export function OpenSlackAppSetup() {
@@ -108,6 +128,14 @@ export function QuitApp() {
 
 export function ReadLogs() {
   return window['go']['main']['App']['ReadLogs']();
+}
+
+export function SaveDiscord(arg1, arg2) {
+  return window['go']['main']['App']['SaveDiscord'](arg1, arg2);
+}
+
+export function SaveNtfy(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveNtfy'](arg1, arg2, arg3);
 }
 
 export function SaveSlack(arg1, arg2, arg3) {

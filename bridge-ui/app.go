@@ -84,6 +84,7 @@ type AppState struct {
 	BotUsername string `json:"botUsername"`
 	SlackUser   string `json:"slackUser"`
 	SlackTeam   string `json:"slackTeam"`
+	DiscordUser string `json:"discordUser"`
 	Running     bool   `json:"running"`
 	AtDesk      bool   `json:"atDesk"`
 	IDEsLinked  int    `json:"idesLinked"`
@@ -102,6 +103,7 @@ func (a *App) GetState() AppState {
 		BotUsername: cfg.Telegram.BotUsername,
 		SlackUser:   cfg.Slack.UserName,
 		SlackTeam:   cfg.Slack.Team,
+		DiscordUser: cfg.Discord.UserName,
 		Running:     a.IsBridgeRunning(),
 		AtDesk:      cfg.AtDesk,
 		DataDir:     dataDir(),
@@ -241,18 +243,7 @@ func (a *App) DetectSlackUser(botToken, appToken string) SlackLink {
 	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Second)
 	defer cancel()
 	// Slack hands each event to just one open socket, so make sure ours is the only one.
-	if a.hub.IsRunning() {
-		a.hub.mu.Lock()
-		polling := a.hub.slKey != ""
-		a.hub.mu.Unlock()
-		if polling {
-			a.hub.Stop() // restarted when the settings are saved
-		}
-	} else if h, err := newHubClient().health(ctx); err == nil && h.Daemon {
-		c := newHubClient()
-		c.post(ctx, "/api/shutdown")
-		c.waitGone(5 * time.Second)
-	}
+	a.releaseChannel(ctx, "slack")
 	return DetectSlackUser(ctx, botToken, appToken, 60*time.Second)
 }
 
@@ -261,6 +252,74 @@ func (a *App) OpenSlackAppSetup() { runtime.BrowserOpenURL(a.ctx, SlackCreateApp
 
 // GetSlackManifest returns the app manifest to paste manually.
 func (a *App) GetSlackManifest() string { return slackManifest }
+
+// SaveDiscord stores the Discord channel and makes it active. Returns "" on success.
+func (a *App) SaveDiscord(token string, link DiscordLink) string {
+	cfg, _ := loadConfig()
+	cfg.Channel = "discord"
+	cfg.Discord = DiscordConfig{BotToken: strings.TrimSpace(token), UserID: link.UserID, UserName: link.UserName, ChannelID: link.ChannelID}
+	if p := configProblem(cfg); p != "" {
+		return p
+	}
+	return a.applyConfig(cfg)
+}
+
+func (a *App) GetDiscordSettings() DiscordConfig {
+	cfg, _ := loadConfig()
+	return cfg.Discord
+}
+
+// OpenDiscordInvite opens the page that adds the bot to one of the user's servers.
+func (a *App) OpenDiscordInvite(token string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	u, err := DiscordInviteURL(ctx, token)
+	if err != nil {
+		return strings.TrimPrefix(err.Error(), "discord: ")
+	}
+	runtime.BrowserOpenURL(a.ctx, u)
+	return ""
+}
+
+// DetectDiscordUser waits (up to 60s) for the user to DM the bot.
+func (a *App) DetectDiscordUser(token string) DiscordLink {
+	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Second)
+	defer cancel()
+	a.releaseChannel(ctx, "discord") // one gateway session at a time keeps things simple
+	return DetectDiscordUser(ctx, token, 60*time.Second)
+}
+
+// SaveNtfy stores the ntfy channel, sends a "linked" notification and makes it active.
+func (a *App) SaveNtfy(server, topic, token string) string {
+	cfg, _ := loadConfig()
+	cfg.Channel = "ntfy"
+	cfg.Ntfy = NtfyConfig{Server: strings.TrimSpace(server), Topic: strings.TrimSpace(topic), Token: strings.TrimSpace(token)}
+	if p := configProblem(cfg); p != "" {
+		return p
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := SendNtfyTest(ctx, cfg.Ntfy); err != nil {
+		return "Couldn't reach the ntfy server: " + strings.TrimPrefix(err.Error(), "ntfy: ")
+	}
+	return a.applyConfig(cfg)
+}
+
+// NewNtfyTopic makes a fresh random topic name.
+func (a *App) NewNtfyTopic() string { return NewNtfyTopic() }
+
+// GetNtfySettings returns the saved ntfy settings, with a fresh topic if none is set yet.
+func (a *App) GetNtfySettings() NtfyConfig {
+	cfg, _ := loadConfig()
+	n := cfg.Ntfy
+	if n.Topic == "" {
+		n.Topic = NewNtfyTopic()
+	}
+	if n.Server == "" {
+		n.Server = "https://ntfy.sh"
+	}
+	return n
+}
 
 // SaveWhatsApp stores the WhatsApp (CallMeBot) channel and makes it active.
 func (a *App) SaveWhatsApp(apiKey, phone, ngrokToken string) string {
@@ -297,26 +356,26 @@ func (a *App) GetWhatsAppSettings() map[string]string {
 func (a *App) DetectTelegramChat(token string) TelegramChat {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	// Only one process may poll a bot at a time. If our own hub is polling this
-	// bot it has already seen the message; a background hub is asked to exit.
+	// Only one process may poll a bot at a time, so stop ours (it is restarted
+	// when the settings are saved). Messages it already received are remembered.
+	a.releaseChannel(ctx, "telegram")
+	return DetectTelegramChat(ctx, token)
+}
+
+// releaseChannel stops whatever is listening on this kind of channel (our hub,
+// or a background one) so setup detection can listen instead.
+func (a *App) releaseChannel(ctx context.Context, kind string) {
 	if a.hub.IsRunning() {
-		a.hub.mu.Lock()
-		polling, last := strings.HasPrefix(a.hub.tgKey, strings.TrimSpace(token)+"|"), a.hub.lastTgChat
-		a.hub.mu.Unlock()
-		if polling && last.ID != "" {
-			tgSendText(ctx, TelegramConfig{BotToken: strings.TrimSpace(token), ChatID: last.ID},
-				"✅ Momentum is linked to this chat. Questions from your AI agents will appear here.", 0)
-			return last
+		if a.hub.ChannelKind() == kind {
+			a.hub.Stop()
 		}
-		if polling {
-			a.hub.Stop() // restarted when the settings are saved
-		}
-	} else if h, err := newHubClient().health(ctx); err == nil && h.Daemon {
+		return
+	}
+	if h, err := newHubClient().health(ctx); err == nil && h.Daemon {
 		c := newHubClient()
 		c.post(ctx, "/api/shutdown")
 		c.waitGone(5 * time.Second)
 	}
-	return DetectTelegramChat(ctx, token)
 }
 
 // SendTestQuestion sends a real question to the phone and waits for the answer.

@@ -103,7 +103,7 @@ func slackQuestionBlocks(q *pendingQuestion, status string) []any {
 		b := map[string]any{
 			"type":      "button",
 			"text":      map[string]any{"type": "plain_text", "text": truncate(opt, 75), "emoji": true},
-			"value":     fmt.Sprintf("a:%s:%d", q.ID, i),
+			"value":     buttonValue(q, i),
 			"action_id": fmt.Sprintf("momentum_%d", i),
 		}
 		if i == 0 {
@@ -131,33 +131,31 @@ func slackTarget(sl SlackConfig) string {
 	return sl.UserID // posting to a user ID lands in the app's DM
 }
 
-// sendSlackQuestion posts the question with answer buttons; returns the DM channel and message ts.
-func sendSlackQuestion(ctx context.Context, sl SlackConfig, q *pendingQuestion) (string, string, error) {
+type slackChannel struct{ cfg SlackConfig }
+
+// slackRef identifies a posted message: "channel|ts".
+func slackRef(channel, ts string) string { return channel + "|" + ts }
+
+func (c *slackChannel) Send(ctx context.Context, q *pendingQuestion) (string, error) {
 	var out struct {
 		Channel string `json:"channel"`
 		TS      string `json:"ts"`
 	}
-	err := slackCall(ctx, sl.BotToken, "chat.postMessage", map[string]any{
-		"channel": slackTarget(sl),
+	err := slackCall(ctx, c.cfg.BotToken, "chat.postMessage", map[string]any{
+		"channel": slackTarget(c.cfg),
 		"text":    "Input needed: " + q.Question, // notification / fallback text
 		"blocks":  slackQuestionBlocks(q, ""),
 	}, &out)
-	return out.Channel, out.TS, err
+	return slackRef(out.Channel, out.TS), err
 }
 
-// closeSlackQuestion replaces the buttons with the outcome.
-func closeSlackQuestion(sl SlackConfig, q *pendingQuestion, state, answer string) {
-	status := map[string]string{
-		stateAnswered: "✅ *Answered:* " + slackEscape(answer),
-		stateExpired:  "⌛ *Expired* without an answer (treated as not approved)",
-		stateStopped:  "⏹ *Momentum stopped* before this was answered",
-		stateCanceled: "🚫 *The agent stopped waiting* (its IDE was closed or the request was cancelled)",
-	}[state]
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	slackCall(ctx, sl.BotToken, "chat.update", map[string]any{
-		"channel": q.slackChannel,
-		"ts":      q.slackTS,
+// Close replaces the buttons with the outcome.
+func (c *slackChannel) Close(ctx context.Context, q *pendingQuestion, ref, state, answer string) {
+	channel, ts, _ := strings.Cut(ref, "|")
+	status := statusEmoji[state] + " *" + slackEscape(statusText(state, answer)) + "*"
+	slackCall(ctx, c.cfg.BotToken, "chat.update", map[string]any{
+		"channel": channel,
+		"ts":      ts,
 		"text":    "Input needed: " + q.Question,
 		"blocks":  slackQuestionBlocks(q, status),
 	}, nil)
@@ -241,48 +239,38 @@ func slackRead(ctx context.Context, conn *websocket.Conn, handle func(env slackE
 	}
 }
 
-// slackLoop keeps a Socket Mode connection open and routes taps and replies to questions.
-func (h *Hub) slackLoop(ctx context.Context, sl SlackConfig, ready chan struct{}) {
-	readyOnce := func() {
-		select {
-		case <-ready:
-		default:
-			close(ready)
-		}
-	}
-	defer readyOnce()
+// Run keeps a Socket Mode connection open and routes taps and replies to questions.
+func (c *slackChannel) Run(ctx context.Context, host *ChannelHost, ready func()) {
 	backoff := time.Second
 	failing := false
 	for ctx.Err() == nil {
-		conn, err := slackConnect(ctx, sl.AppToken)
-		readyOnce() // don't hold questions back while Slack is unreachable
+		conn, err := slackConnect(ctx, c.cfg.AppToken)
+		ready() // don't hold questions back while Slack is unreachable
 		if err != nil {
 			if !failing {
-				h.log("⚠️ Slack connection: %v (retrying)", err)
+				host.Logf("⚠️ Slack connection: %v (retrying)", err)
 				failing = true
 			}
-			select {
-			case <-ctx.Done():
+			if !backoffWait(ctx, &backoff) {
 				return
-			case <-time.After(backoff):
 			}
-			backoff = min(backoff*2, 30*time.Second)
 			continue
 		}
 		if failing {
-			h.log("✅ Slack connection recovered")
+			host.Logf("✅ Slack connection recovered")
 			failing = false
 		}
 		backoff = time.Second
-		err = slackRead(ctx, conn, func(env slackEnvelope) { h.handleSlackEnvelope(ctx, sl, env) })
+		err = slackRead(ctx, conn, func(env slackEnvelope) { c.handle(ctx, host, env) })
 		conn.Close()
 		if ctx.Err() == nil && err != nil && !strings.Contains(err.Error(), "reconnect") {
-			h.log("⚠️ Slack connection dropped: %v (reconnecting)", err)
+			host.Logf("⚠️ Slack connection dropped: %v (reconnecting)", err)
 		}
 	}
 }
 
-func (h *Hub) handleSlackEnvelope(ctx context.Context, sl SlackConfig, env slackEnvelope) {
+func (c *slackChannel) handle(ctx context.Context, host *ChannelHost, env slackEnvelope) {
+	sl := c.cfg
 	switch env.Type {
 	case "interactive":
 		var p slackBlockActions
@@ -292,18 +280,7 @@ func (h *Hub) handleSlackEnvelope(ctx context.Context, sl SlackConfig, env slack
 		if p.User.ID != sl.UserID {
 			return // only the linked person may answer
 		}
-		parts := strings.Split(p.Actions[0].Value, ":")
-		if len(parts) != 3 || parts[0] != "a" {
-			return
-		}
-		idx, _ := strconv.Atoi(parts[2])
-		h.mu.Lock()
-		q := h.questions[parts[1]]
-		ok := q != nil && idx >= 0 && idx < len(q.Options) && h.finishLocked(q, stateAnswered, q.Options[idx])
-		h.mu.Unlock()
-		if ok {
-			h.log("📥 [%s] answered: %s", orDash(sourceLabel(q)), q.Options[idx])
-		}
+		host.TapButton(p.Actions[0].Value)
 
 	case "events_api":
 		var p struct {
@@ -316,45 +293,24 @@ func (h *Hub) handleSlackEnvelope(ctx context.Context, sl SlackConfig, env slack
 		if m.Type != "message" || m.ChannelType != "im" || m.BotID != "" || m.Subtype != "" || m.User != sl.UserID {
 			return
 		}
-		text := strings.TrimSpace(m.Text)
-		if text == "" {
-			return
+		replyTo := ""
+		if m.ThreadTS != "" {
+			replyTo = slackRef(m.Channel, m.ThreadTS)
 		}
-		sent, _ := strconv.ParseFloat(m.TS, 64)
-		h.mu.Lock()
-		var target *pendingQuestion
-		waiting := 0
-		for _, q := range h.questions {
-			// A message older than the question can't be answering it.
-			if q.state != stateWaiting || (sent > 0 && int64(sent) < q.Created.Unix()) {
-				continue
-			}
-			waiting++
-			if m.ThreadTS != "" && q.slackTS == m.ThreadTS {
-				target = q
-			}
+		var sent time.Time
+		if f, err := strconv.ParseFloat(m.TS, 64); err == nil && f > 0 {
+			sent = time.Unix(int64(f), 0)
 		}
-		if target == nil && m.ThreadTS == "" && waiting == 1 {
-			for _, q := range h.questions {
-				if q.state == stateWaiting && (sent == 0 || int64(sent) >= q.Created.Unix()) {
-					target = q
-				}
-			}
-		}
-		ok := target != nil && h.finishLocked(target, stateAnswered, text)
-		h.mu.Unlock()
+		res := host.Text(replyTo, m.Text, sent)
 		thread := m.ThreadTS
-		switch {
-		case ok:
-			h.log("📥 [%s] answered: %s", orDash(sourceLabel(target)), text)
-			slackSay(ctx, sl, m.Channel, target.slackTS, "✅ Sent to "+slackEscape(orDash(sourceLabel(target))))
-		case thread != "":
-			slackSay(ctx, sl, m.Channel, thread, "That question is already closed.")
-		case waiting == 0:
-			slackSay(ctx, sl, m.Channel, "", "✅ Momentum is connected. Questions from your AI agents will appear here.")
-		default:
-			slackSay(ctx, sl, m.Channel, "", fmt.Sprintf("%d questions are open. Reply in the thread of the one you're answering.", waiting))
+		if res.Answered != nil {
+			_, thread, _ = strings.Cut(res.Answered.ref, "|")
 		}
+		msg := res.Reply()
+		if res.Answered == nil && res.Open == 0 && !res.Closed {
+			msg = "✅ Momentum is connected. Questions from your AI agents will appear here."
+		}
+		slackSay(ctx, sl, m.Channel, thread, slackEscape(strings.Replace(msg, "Reply directly to", "Reply in the thread of", 1)))
 	}
 }
 

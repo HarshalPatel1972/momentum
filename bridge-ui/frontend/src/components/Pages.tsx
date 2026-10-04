@@ -6,6 +6,8 @@ import IdeList from './IdeList';
 import TelegramSetup from './TelegramSetup';
 import WhatsAppSetup from './WhatsAppSetup';
 import SlackSetup from './SlackSetup';
+import DiscordSetup from './DiscordSetup';
+import NtfySetup from './NtfySetup';
 import ChannelPicker, { ChannelId } from './ChannelPicker';
 import { TRUST } from './Home';
 
@@ -59,7 +61,7 @@ export function IdesPage({ refresh, toast }: { refresh: () => void; toast: (m: s
 }
 
 export function SettingsPage({ state, refresh, toast }: { state: AppState; refresh: () => void; toast: (m: string) => void }) {
-    const [channel, setChannel] = useState<ChannelId>((['telegram', 'slack', 'whatsapp'].includes(state.channel) ? state.channel : 'telegram') as ChannelId);
+    const [channel, setChannel] = useState<ChannelId>((['telegram', 'slack', 'discord', 'ntfy', 'whatsapp'].includes(state.channel) ? state.channel : 'telegram') as ChannelId);
     const [logs, setLogs] = useState<string[] | null>(null);
 
     const showLogs = async () => setLogs(logs ? null : await api.logs());
@@ -74,6 +76,8 @@ export function SettingsPage({ state, refresh, toast }: { state: AppState; refre
                 <div style={{ marginTop: 20 }}>
                     {channel === 'telegram' && <TelegramSetup showSteps={false} onLinked={() => { toast('Telegram linked. Questions now go there'); refresh(); }} />}
                     {channel === 'slack' && <SlackSetup onLinked={() => { toast('Slack linked. Questions now go there'); refresh(); }} />}
+                    {channel === 'discord' && <DiscordSetup onLinked={() => { toast('Discord linked. Questions now go there'); refresh(); }} />}
+                    {channel === 'ntfy' && <NtfySetup onLinked={() => { toast('ntfy set up. Questions now go there'); refresh(); }} />}
                     {channel === 'whatsapp' && <WhatsAppSetup onSaved={refresh} />}
                 </div>
             </div>
@@ -148,7 +152,7 @@ export function AboutPage({ state, toast }: { state: AppState; toast: (m: string
                     <div className="card-title" style={{ marginBottom: 12 }}>Why Momentum exists</div>
                     <p>AI agents can now work for hours on their own: refactoring, fixing tests, shipping features. But the moment they need a human decision ("delete these files?", "which approach?"), they stop and wait. If you've stepped away, they wait for hours.</p>
                     <p>Momentum keeps that work moving. It gives every agent a way to reach you on your phone, wherever you are. You make the decision in one tap, and the agent picks up exactly where it left off.</p>
-                    <p>It's deliberately small: one app on your PC, your own Telegram bot or Slack app, and nothing in between.</p>
+                    <p>It's deliberately small: one app on your PC, your own bot in the messaging app you already use, and nothing in between.</p>
                 </div>
                 <div className="card card-pad">
                     <div className="card-title">Our promises</div>

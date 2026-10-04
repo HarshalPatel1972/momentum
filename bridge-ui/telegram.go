@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -119,7 +120,7 @@ func answerKeyboard(q *pendingQuestion) map[string]any {
 	var rows [][]map[string]string
 	var row []map[string]string
 	for i, opt := range q.Options {
-		row = append(row, map[string]string{"text": opt, "callback_data": fmt.Sprintf("a:%s:%d", q.ID, i)})
+		row = append(row, map[string]string{"text": opt, "callback_data": buttonValue(q, i)})
 		// Short options sit two per row; long ones get a row each.
 		if len(row) == 2 || len(opt) > 18 || (i+1 < len(q.Options) && len(q.Options[i+1]) > 18) {
 			rows = append(rows, row)
@@ -132,32 +133,27 @@ func answerKeyboard(q *pendingQuestion) map[string]any {
 	return map[string]any{"inline_keyboard": rows}
 }
 
-// sendTelegramQuestion posts the question with answer buttons and returns the message id.
-func sendTelegramQuestion(ctx context.Context, tg TelegramConfig, q *pendingQuestion) (int64, error) {
+type telegramChannel struct{ cfg TelegramConfig }
+
+func (t *telegramChannel) Send(ctx context.Context, q *pendingQuestion) (string, error) {
 	var msg tgMessage
-	err := tgCall(ctx, tg.BotToken, "sendMessage", map[string]any{
-		"chat_id":                  tg.ChatID,
+	err := tgCall(ctx, t.cfg.BotToken, "sendMessage", map[string]any{
+		"chat_id":                  t.cfg.ChatID,
 		"text":                     questionText(q, ""),
 		"parse_mode":               "HTML",
 		"disable_web_page_preview": true,
 		"reply_markup":             answerKeyboard(q),
 	}, &msg)
-	return msg.MessageID, err
+	return strconv.FormatInt(msg.MessageID, 10), err
 }
 
-// closeTelegramQuestion replaces the buttons with the outcome so old messages can't be tapped.
-func closeTelegramQuestion(tg TelegramConfig, q *pendingQuestion, state, answer string) {
-	status := map[string]string{
-		stateAnswered: "✅ <b>Answered:</b> " + html.EscapeString(answer),
-		stateExpired:  "⌛ <b>Expired</b> without an answer (treated as not approved)",
-		stateStopped:  "⏹ <b>Momentum stopped</b> before this was answered",
-		stateCanceled: "🚫 <b>The agent stopped waiting</b> (its IDE was closed or the request was cancelled)",
-	}[state]
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	tgCall(ctx, tg.BotToken, "editMessageText", map[string]any{
-		"chat_id":      tg.ChatID,
-		"message_id":   q.tgMessageID,
+// Close replaces the buttons with the outcome so old messages can't be tapped.
+func (t *telegramChannel) Close(ctx context.Context, q *pendingQuestion, ref, state, answer string) {
+	status := statusEmoji[state] + " <b>" + html.EscapeString(statusText(state, answer)) + "</b>"
+	id, _ := strconv.ParseInt(ref, 10, 64)
+	tgCall(ctx, t.cfg.BotToken, "editMessageText", map[string]any{
+		"chat_id":      t.cfg.ChatID,
+		"message_id":   id,
 		"text":         questionText(q, status),
 		"parse_mode":   "HTML",
 		"reply_markup": map[string]any{"inline_keyboard": [][]any{}},
@@ -172,8 +168,9 @@ func tgSendText(ctx context.Context, tg TelegramConfig, text string, replyTo int
 	return tgCall(ctx, tg.BotToken, "sendMessage", p, nil)
 }
 
-// telegramLoop long-polls for button taps and replies until ctx is cancelled.
-func (h *Hub) telegramLoop(ctx context.Context, tg TelegramConfig, ready chan struct{}) {
+// Run long-polls for button taps and replies until ctx is cancelled.
+func (t *telegramChannel) Run(ctx context.Context, host *ChannelHost, ready func()) {
+	tg := t.cfg
 	tgCall(ctx, tg.BotToken, "deleteWebhook", map[string]any{}, nil) // getUpdates is refused while a webhook is set
 	// Telegram keeps undelivered updates for 24h. Anything sent before we
 	// started listening can't be an answer to a question we're about to ask,
@@ -182,9 +179,9 @@ func (h *Hub) telegramLoop(ctx context.Context, tg TelegramConfig, ready chan st
 	var backlog []tgUpdate
 	if tgCall(ctx, tg.BotToken, "getUpdates", map[string]any{"timeout": 0}, &backlog) == nil && len(backlog) > 0 {
 		offset = backlog[len(backlog)-1].UpdateID + 1
-		h.log("ℹ️ Skipped %d Telegram message(s) sent before Momentum started", len(backlog))
+		host.Logf("ℹ️ Skipped %d Telegram message(s) sent before Momentum started", len(backlog))
 	}
-	close(ready)
+	ready()
 	backoff := time.Second
 	failing := false
 	for ctx.Err() == nil {
@@ -201,30 +198,28 @@ func (h *Hub) telegramLoop(ctx context.Context, tg TelegramConfig, ready chan st
 				return
 			}
 			if !failing {
-				h.log("⚠️ Telegram polling: %v (retrying)", err)
+				host.Logf("⚠️ Telegram polling: %v (retrying)", err)
 				failing = true
 			}
-			select {
-			case <-ctx.Done():
+			if !backoffWait(ctx, &backoff) {
 				return
-			case <-time.After(backoff):
 			}
-			backoff = min(backoff*2, 30*time.Second)
 			continue
 		}
 		if failing {
-			h.log("✅ Telegram polling recovered")
+			host.Logf("✅ Telegram polling recovered")
 			failing = false
 		}
 		backoff = time.Second
 		for _, u := range updates {
 			offset = u.UpdateID + 1
-			h.handleTelegramUpdate(ctx, tg, u)
+			t.handle(ctx, host, u)
 		}
 	}
 }
 
-func (h *Hub) handleTelegramUpdate(ctx context.Context, tg TelegramConfig, u tgUpdate) {
+func (t *telegramChannel) handle(ctx context.Context, host *ChannelHost, u tgUpdate) {
+	tg := t.cfg
 	switch {
 	case u.Callback != nil:
 		cb := u.Callback
@@ -236,32 +231,18 @@ func (h *Hub) handleTelegramUpdate(ctx context.Context, tg TelegramConfig, u tgU
 			reply("Not allowed")
 			return
 		}
-		var id string
-		var idx int
-		parts := strings.Split(cb.Data, ":")
-		if len(parts) == 3 && parts[0] == "a" {
-			id = parts[1]
-			idx, _ = strconv.Atoi(parts[2])
-		}
-		h.mu.Lock()
-		q := h.questions[id]
-		ok := q != nil && idx >= 0 && idx < len(q.Options) && h.finishLocked(q, stateAnswered, q.Options[idx])
-		h.mu.Unlock()
-		switch {
-		case ok:
-			h.log("📥 [%s] answered: %s", orDash(sourceLabel(q)), q.Options[idx])
-			reply("✅ Sent: " + q.Options[idx])
-		case q == nil:
-			reply("This question has expired")
-		default:
+		switch res, answer := host.TapButton(cb.Data); res {
+		case TapAnswered:
+			reply("✅ Sent: " + answer)
+		case TapClosed:
 			reply("Already answered")
+		default:
+			reply("This question has expired")
 		}
 
 	case u.Message != nil:
 		m := u.Message
-		h.mu.Lock()
-		h.lastTgChat = TelegramChat{ID: strconv.FormatInt(m.Chat.ID, 10), Name: chatName(m.Chat)}
-		h.mu.Unlock()
+		rememberTelegramChat(tg.BotToken, TelegramChat{ID: strconv.FormatInt(m.Chat.ID, 10), Name: chatName(m.Chat)})
 		if strconv.FormatInt(m.Chat.ID, 10) != tg.ChatID {
 			return // ignore other chats entirely
 		}
@@ -273,42 +254,45 @@ func (h *Hub) handleTelegramUpdate(ctx context.Context, tg TelegramConfig, u tgU
 			tgSendText(ctx, tg, "✅ Momentum is connected. Questions from your AI agents will appear here.", 0)
 			return
 		}
-		// A reply to a question answers that question; a plain message answers
-		// the only open question, if there is exactly one.
-		h.mu.Lock()
-		var target *pendingQuestion
-		waiting := 0
-		for _, q := range h.questions {
-			// A message older than the question can't be answering it.
-			if q.state != stateWaiting || (m.Date != 0 && m.Date < q.Created.Unix()) {
-				continue
-			}
-			waiting++
-			if m.ReplyTo != nil && q.tgMessageID == m.ReplyTo.MessageID {
-				target = q
-			}
+		replyTo := ""
+		if m.ReplyTo != nil {
+			replyTo = strconv.FormatInt(m.ReplyTo.MessageID, 10)
 		}
-		if target == nil && m.ReplyTo == nil && waiting == 1 {
-			for _, q := range h.questions {
-				if q.state == stateWaiting && (m.Date == 0 || m.Date >= q.Created.Unix()) {
-					target = q
-				}
-			}
+		var sent time.Time
+		if m.Date != 0 {
+			sent = time.Unix(m.Date, 0)
 		}
-		ok := target != nil && h.finishLocked(target, stateAnswered, text)
-		h.mu.Unlock()
-		switch {
-		case ok:
-			h.log("📥 [%s] answered: %s", orDash(sourceLabel(target)), text)
-			tgSendText(ctx, tg, "✅ Sent to "+html.EscapeString(orDash(sourceLabel(target))), m.MessageID)
-		case m.ReplyTo != nil:
-			tgSendText(ctx, tg, "That question is already closed.", m.MessageID)
-		case waiting == 0:
-			tgSendText(ctx, tg, "There are no open questions right now.", m.MessageID)
-		default:
-			tgSendText(ctx, tg, fmt.Sprintf("%d questions are open. Reply directly to the one you're answering.", waiting), m.MessageID)
-		}
+		res := host.Text(replyTo, text, sent)
+		tgSendText(ctx, tg, html.EscapeString(res.Reply()), m.MessageID)
 	}
+}
+
+// The last chat that messaged each bot, so Detect still works when a running
+// listener consumed the message. Only recent messages count: Detect is meant
+// for "I just pressed Start", not someone who wrote to the bot hours ago.
+const recentChatWindow = 10 * time.Minute
+
+type seenChat struct {
+	chat TelegramChat
+	at   time.Time
+}
+
+var (
+	recentChatsMu sync.Mutex
+	recentChats   = map[string]seenChat{} // bot token -> last chat that messaged it
+)
+
+func rememberTelegramChat(token string, c TelegramChat) {
+	recentChatsMu.Lock()
+	recentChats[token] = seenChat{c, time.Now()}
+	recentChatsMu.Unlock()
+}
+
+func recentTelegramChat(token string) (TelegramChat, bool) {
+	recentChatsMu.Lock()
+	defer recentChatsMu.Unlock()
+	s, ok := recentChats[token]
+	return s.chat, ok && time.Since(s.at) < recentChatWindow
 }
 
 type TelegramChat struct {
@@ -330,6 +314,13 @@ func DetectTelegramChat(ctx context.Context, token string) TelegramChat {
 	}
 	if err := tgCall(ctx, token, "getMe", map[string]any{}, &me); err != nil {
 		return TelegramChat{Error: "Bot token rejected by Telegram: " + err.Error()}
+	}
+	// A running listener may already have consumed the message; it remembers the sender.
+	if chat, ok := recentTelegramChat(token); ok {
+		chat.Bot = me.Username
+		tgSendText(ctx, TelegramConfig{BotToken: token, ChatID: chat.ID},
+			"✅ Momentum is linked to this chat. Questions from your AI agents will appear here.", 0)
+		return chat
 	}
 	tgCall(ctx, token, "deleteWebhook", map[string]any{}, nil)
 	var updates []tgUpdate

@@ -391,7 +391,7 @@ code, pre { font-family: var(--mono); }
 .side-status span { display: block; font-size: 11.5px; }
 
 /* channel picker */
-.channel-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.channel-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
 .channel-picker button {
   display: flex; align-items: center; gap: 11px; padding: 12px 14px; border-radius: 12px; text-align: left;
   background: var(--bg-raised); border: 1px solid var(--line-strong); transition: border-color .15s, background .15s;
@@ -400,3 +400,6 @@ code, pre { font-family: var(--mono); }
 .channel-picker button.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
 .channel-picker b { display: block; font-size: 13.5px; }
 .channel-picker .grow > span { display: block; font-size: 11.5px; color: var(--text-3); }
+
+.topic-box { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 14px; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--line-strong); }
+.topic-box code { flex: 1; min-width: 0; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all; }

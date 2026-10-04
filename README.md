@@ -45,10 +45,14 @@ That's the only account you need. No ngrok, no port forwarding.
 
 **Slack (great for work, about 3 minutes):** in Momentum choose **Slack** → **Create Slack app**. Slack opens with Momentum's app already filled in; pick your workspace, **Create**, then **Install to Workspace**. Copy the **Bot User OAuth Token** (`xoxb-…`) and an **App-Level Token** with `connections:write` (`xapp-…`) into Momentum, send the Momentum app any DM in Slack, and click **Detect**. The app only asks for `chat:write`, `im:history` and `users:read`.
 
+**Discord (popular with developers, about 3 minutes):** create an application in the [Discord Developer Portal](https://discord.com/developers/applications), open **Bot → Reset Token** and paste the token into Momentum. Click **Add bot to a server** (Discord only lets you DM bots you share a server with; it asks for no permissions), then **Detect** and send the bot any DM.
+
+**ntfy (no account, works in any country):** install the free [ntfy](https://ntfy.sh) app, subscribe to the private topic Momentum shows you, and click **Save & send test**. You can also point it at your own ntfy server. ntfy shows up to 3 answer buttons and can't take typed replies.
+
 **WhatsApp** also works (via CallMeBot), but it can only send a link, so it needs a free ngrok token too.
 
 #### Step 3: Run the 3-step setup in Momentum
-1. **Link your phone:** pick Telegram, Slack or WhatsApp, paste the token(s) and click **Detect**. Momentum finds you and sends a "linked" message to confirm.
+1. **Link your phone:** pick Telegram, Slack, Discord, ntfy or WhatsApp, paste the token(s) and click **Detect**. Momentum finds you and sends a "linked" message to confirm.
 2. **Connect your IDEs:** click **Connect all**. Momentum finds the AI IDEs on your PC and adds itself to each one's MCP settings, keeping your other servers as they are. Restart (or reload) each IDE afterwards.
 3. **Try it for real:** send yourself a test question and tap the answer on your phone.
 
@@ -105,7 +109,7 @@ Momentum tells every agent when to use it, so normally you don't have to mention
 "Ask me on my phone whether you should create test.txt, then do what I say"
 ```
 
-Your phone will buzz. Tap an answer button right in Telegram or Slack (or reply to type your own answer) and watch the agent continue.
+Your phone will buzz. Tap an answer button right in your messaging app (or reply to type your own answer) and watch the agent continue.
 
 ---
 
@@ -122,17 +126,17 @@ Your phone will buzz. Tap an answer button right in Telegram or Slack (or reply 
 ```
 
 - Each IDE starts its own small `Momentum.exe --mcp` process. These all hand their questions to **one shared hub** on `127.0.0.1`, so several IDEs can be open at the same time.
-- The hub sends each question to your Telegram bot or Slack DM with the options as **buttons**. It collects your tap over an outgoing connection: Telegram long-polling, or Slack's Socket Mode WebSocket. So it needs no tunnel, public URL or firewall change. After you answer, the message updates to show the answer and its buttons disappear.
-- Want to type instead? **Reply** to the question (in Slack, reply in its thread). If only one question is open, any message you send answers it.
+- The hub sends each question to your Telegram bot, Slack or Discord DM, or ntfy topic, with the options as **buttons**. It collects your tap over an outgoing connection: Telegram long-polling, Slack's Socket Mode, the Discord Gateway, or an ntfy subscription. So it needs no tunnel, public URL or firewall change. After you answer, the message updates to show the answer and its buttons disappear.
+- Want to type instead? **Reply** to the question (in Slack, reply in its thread). If only one question is open, any message you send answers it. (ntfy has no typed replies.)
 - If the Momentum window isn't open, the hub starts by itself in the background (tray icon: *Momentum (background)*). Opening the app takes over from it.
 - Messages say which IDE and project is asking, e.g. *Cursor · my-app*.
 - The agent gets two tools: `ask_remote_human` (asks and waits) and `get_remote_answer`. Some clients (e.g. Claude Desktop) cancel tool calls after about 60 seconds. For those, Momentum returns a `request_id` before that limit and the agent keeps waiting with `get_remote_answer`, so your answer is never lost.
 - A question expires after 15 minutes. The agent is told to treat an unanswered question as **not approved**.
 
 ### Privacy & security
-- Your question text goes through **Telegram** or **Slack** (or CallMeBot + an ngrok answer page for WhatsApp). Nothing is stored on any Momentum server; there isn't one.
-- Only you can answer: taps and messages from any other Telegram chat or Slack user are ignored. Each question can be answered once.
-- With Telegram or Slack, nothing on your PC is reachable from the internet. The local API that IDEs talk to listens on `127.0.0.1` only and requires a per-user key.
+- Your question text goes through the messaging service you chose (Telegram, Slack, Discord, ntfy, or CallMeBot + an ngrok answer page for WhatsApp). Nothing is stored on any Momentum server; there isn't one.
+- Only you can answer: taps and messages from anyone else are ignored, and ntfy taps must carry the question's own secret. Each question can be answered once.
+- With Telegram, Slack, Discord or ntfy, nothing on your PC is reachable from the internet. The local API that IDEs talk to listens on `127.0.0.1` only and requires a per-user key.
 - Config lives in `%APPDATA%\Momentum\` and is shared by every IDE and every copy of `Momentum.exe`.
 
 ---
@@ -143,8 +147,8 @@ Your phone will buzz. Tap an answer button right in Telegram or Slack (or reply 
 ✅ **One-click setup** - Detects your IDEs and edits their config safely (backups kept as `*.momentum.bak`)  
 ✅ **Many IDEs at once** - One shared hub  
 ✅ **Lightweight** - Single small exe  
-✅ **One-tap answers** - Buttons right in Telegram or Slack, or reply to type your own answer  
-✅ **Channels** - Telegram (recommended, no extra accounts), Slack (Socket Mode, no public URL), WhatsApp (via CallMeBot + ngrok)  
+✅ **One-tap answers** - Buttons right in your messaging app, or reply to type your own answer  
+✅ **Channels** - Telegram (recommended), Slack, Discord, ntfy (no account, any country), WhatsApp (basic, via CallMeBot + ngrok)  
 
 ---
 
@@ -169,6 +173,12 @@ Your phone will buzz. Tap an answer button right in Telegram or Slack (or reply 
 **Slack: Detect says "No message yet"**
 - In Slack, find **Momentum** under *Apps* in the sidebar and send it any message, then click **Detect** again (it waits up to a minute).
 - If you can't type in the app's Messages tab, recreate the app from Momentum's manifest (it enables messaging).
+
+**Discord: "not allowed" or Detect never sees my DM**
+- Add the bot to a server you're in (Momentum's **Add bot to a server** button), then open the bot from that server's member list and send it a DM *after* clicking Detect.
+
+**ntfy: no notification arrives**
+- Check the app is subscribed to exactly the topic Momentum shows (copy it), and on the same server.
 
 **Buttons do nothing / "Conflict: terminated by other getUpdates request" in the log**
 - Only one program can read a Telegram bot's updates at a time. Use a bot dedicated to Momentum, not one another tool also uses.

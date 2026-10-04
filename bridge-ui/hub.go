@@ -45,9 +45,8 @@ type pendingQuestion struct {
 	Created  time.Time
 	Expires  time.Time
 
-	tgMessageID  int64  // Telegram message holding the answer buttons
-	slackTS      string // Slack message holding the answer buttons
-	slackChannel string
+	channel Channel // the app it was sent through (nil for link-based channels)
+	ref     string  // the posted message, for matching replies and closing it
 
 	state  string
 	answer string
@@ -75,14 +74,12 @@ type Hub struct {
 	tunnelToken  string
 	publicURL    string
 	tunnelErr    string
-	linkKey      string // what the tunnel was started for; "" = no tunnel
-	tgCancel     context.CancelFunc
-	tgKey        string        // bot token|chat the poller runs for
-	lastTgChat   TelegramChat  // most recent chat that messaged the bot (setup helper)
-	tgReady      chan struct{} // closed once the poller has skipped the backlog
-	slKey        string        // Slack tokens|user the socket runs for
-	slCancel     context.CancelFunc
-	slReady      chan struct{} // closed once the first Slack connection attempt finished
+	linkKey      string  // what the tunnel was started for; "" = no tunnel
+	ch           Channel // the active button channel (Telegram, Slack…), nil for link channels
+	chKind       string  // its config name, e.g. "slack"
+	chKey        string  // its settings; it restarts only when they change
+	chCancel     context.CancelFunc
+	chReady      chan struct{} // closed once the channel can hear answers
 	questions    map[string]*pendingQuestion
 	byToken      map[string]*pendingQuestion
 }
@@ -146,47 +143,31 @@ func (h *Hub) Start(cfg BridgeConfig) error {
 }
 
 // needsLink reports whether the channel sends a link to a web page (and so
-// needs the ngrok tunnel). Telegram doesn't: answers come back as button taps.
-func needsLink(cfg BridgeConfig) bool { return cfg.Channel != "telegram" && cfg.Channel != "slack" }
+// needs the ngrok tunnel). Button channels don't: answers come back as taps.
+func needsLink(cfg BridgeConfig) bool { return !buttonChannels[cfg.Channel] }
 
-// applyChannelsLocked starts/stops the Telegram poller and the tunnel so they
+// ChannelKind is the button channel currently listening ("" if none).
+func (h *Hub) ChannelKind() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.chKind
+}
+
+// applyChannelsLocked starts/stops the channel listener and the tunnel so they
 // match the current config, restarting only what changed.
 func (h *Hub) applyChannelsLocked() {
-	tgKey := ""
-	if h.cfg.Channel == "telegram" && configProblem(h.cfg) == "" {
-		tgKey = h.cfg.Telegram.BotToken + "|" + h.cfg.Telegram.ChatID
-	}
-	if tgKey != h.tgKey {
-		if h.tgCancel != nil {
-			h.tgCancel()
-			h.tgCancel = nil
-		}
-		h.tgKey = tgKey
-		if tgKey != "" {
+	ch, key := newChannel(h.cfg)
+	if key != h.chKey {
+		h.stopChannelLocked()
+		h.ch, h.chKey = ch, key
+		if ch != nil {
+			h.chKind = h.cfg.Channel
 			ctx, cancel := context.WithCancel(context.Background())
-			h.tgCancel = cancel
-			h.tgReady = make(chan struct{})
-			go h.telegramLoop(ctx, h.cfg.Telegram, h.tgReady)
-			h.log("🤖 Telegram connected: answers arrive as button taps (no tunnel needed)")
-		}
-	}
-
-	slKey := ""
-	if h.cfg.Channel == "slack" && configProblem(h.cfg) == "" {
-		slKey = h.cfg.Slack.BotToken + "|" + h.cfg.Slack.AppToken + "|" + h.cfg.Slack.UserID
-	}
-	if slKey != h.slKey {
-		if h.slCancel != nil {
-			h.slCancel()
-			h.slCancel = nil
-		}
-		h.slKey = slKey
-		if slKey != "" {
-			ctx, cancel := context.WithCancel(context.Background())
-			h.slCancel = cancel
-			h.slReady = make(chan struct{})
-			go h.slackLoop(ctx, h.cfg.Slack, h.slReady)
-			h.log("💬 Slack connected: answers arrive as button taps (no tunnel needed)")
+			ready := make(chan struct{})
+			var once sync.Once
+			h.chCancel, h.chReady = cancel, ready
+			go ch.Run(ctx, &ChannelHost{h: h, name: h.chKind}, func() { once.Do(func() { close(ready) }) })
+			h.log("💬 %s connected: answers arrive as button taps (no tunnel needed)", channelTitle(h.chKind))
 		}
 	}
 
@@ -295,15 +276,8 @@ func (h *Hub) Stop() {
 		return
 	}
 	h.running = false
-	if h.tgCancel != nil {
-		h.tgCancel()
-		h.tgCancel = nil
-	}
-	if h.slCancel != nil {
-		h.slCancel()
-		h.slCancel = nil
-	}
-	h.tgKey, h.slKey, h.linkKey = "", "", ""
+	h.stopChannelLocked()
+	h.linkKey = ""
 	h.stopTunnelLocked()
 	for _, q := range h.questions {
 		h.finishLocked(q, stateStopped, "")
@@ -329,6 +303,35 @@ func (h *Hub) Stop() {
 	h.log("🛑 Hub stopped")
 }
 
+func (h *Hub) stopChannelLocked() {
+	if h.chCancel != nil {
+		h.chCancel()
+	}
+	h.ch, h.chKind, h.chKey, h.chCancel, h.chReady = nil, "", "", nil, nil
+}
+
+func channelTitle(kind string) string {
+	switch kind {
+	case "ntfy":
+		return "ntfy"
+	case "whatsapp":
+		return "WhatsApp"
+	}
+	return strings.ToUpper(kind[:1]) + kind[1:]
+}
+
+// closeOnChannel updates the posted message with the outcome, in the background.
+func closeOnChannel(q *pendingQuestion, state, answer string) {
+	if q.channel == nil || q.ref == "" {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		q.channel.Close(ctx, q, q.ref, state, answer)
+	}()
+}
+
 func (h *Hub) finishLocked(q *pendingQuestion, state, answer string) bool {
 	if q.state != stateWaiting {
 		return false
@@ -341,12 +344,7 @@ func (h *Hub) finishLocked(q *pendingQuestion, state, answer string) bool {
 		defer h.writes.Done()
 		h.noteActivity(&snapshot)
 	}()
-	if q.tgMessageID != 0 {
-		go closeTelegramQuestion(h.cfg.Telegram, q, state, answer)
-	}
-	if q.slackTS != "" {
-		go closeSlackQuestion(h.cfg.Slack, q, state, answer)
-	}
+	closeOnChannel(q, state, answer)
 	return true
 }
 
@@ -536,45 +534,26 @@ func (h *Hub) handleAsk(w http.ResponseWriter, r *http.Request) {
 	h.log("🔔 [%s] %s", orDash(sourceLabel(q)), q.Question)
 
 	var sendErr error
-	if cfg.Channel == "telegram" {
-		// Don't ask until old messages are skipped, or a tap could be skipped with them.
-		h.mu.Lock()
-		ready := h.tgReady
-		h.mu.Unlock()
+	h.mu.Lock()
+	ch, ready := h.ch, h.chReady
+	h.mu.Unlock()
+	if ch != nil {
+		// Don't ask until the channel can hear the answer (e.g. Telegram has
+		// skipped its backlog), or a tap could be lost.
 		select {
 		case <-ready:
 		case <-time.After(15 * time.Second):
 		case <-r.Context().Done():
 			return
 		}
-		// Register first: a button tap may arrive before sendMessage returns.
-		h.register(q)
-		var msgID int64
-		if msgID, sendErr = sendTelegramQuestion(r.Context(), cfg.Telegram, q); sendErr == nil {
+		q.channel = ch
+		h.register(q) // before sending: a tap may arrive before Send returns
+		var ref string
+		if ref, sendErr = ch.Send(r.Context(), q); sendErr == nil {
 			h.mu.Lock()
-			q.tgMessageID = msgID
+			q.ref = ref
 			if q.state != stateWaiting { // answered in the meantime
-				go closeTelegramQuestion(cfg.Telegram, q, q.state, q.answer)
-			}
-			h.mu.Unlock()
-		}
-	} else if cfg.Channel == "slack" {
-		h.mu.Lock()
-		ready := h.slReady
-		h.mu.Unlock()
-		select {
-		case <-ready:
-		case <-time.After(15 * time.Second):
-		case <-r.Context().Done():
-			return
-		}
-		h.register(q)
-		var channel, ts string
-		if channel, ts, sendErr = sendSlackQuestion(r.Context(), cfg.Slack, q); sendErr == nil {
-			h.mu.Lock()
-			q.slackChannel, q.slackTS = channel, ts
-			if q.state != stateWaiting { // answered in the meantime
-				go closeSlackQuestion(cfg.Slack, q, q.state, q.answer)
+				closeOnChannel(q, q.state, q.answer)
 			}
 			h.mu.Unlock()
 		}

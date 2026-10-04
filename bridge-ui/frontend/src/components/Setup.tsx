@@ -5,12 +5,14 @@ import { Brand } from '../lib';
 import TelegramSetup from './TelegramSetup';
 import WhatsAppSetup from './WhatsAppSetup';
 import SlackSetup from './SlackSetup';
+import DiscordSetup from './DiscordSetup';
+import NtfySetup from './NtfySetup';
 import ChannelPicker, { ChannelId } from './ChannelPicker';
 import IdeList from './IdeList';
 import TestQuestion from './TestQuestion';
 
 const STEPS = [
-    { title: 'Link your phone', desc: 'Telegram, Slack or WhatsApp' },
+    { title: 'Link your phone', desc: 'Telegram, Slack, Discord or ntfy' },
     { title: 'Connect your IDEs', desc: 'One click for every IDE we find' },
     { title: 'Try it for real', desc: 'Send yourself a test question' },
 ];
@@ -57,6 +59,8 @@ export default function Setup({ onFinish, onBack, initialStep = 0 }: { onFinish:
                             <div style={{ marginTop: 22 }}>
                                 {channel === 'telegram' && <TelegramSetup onLinked={() => setLinked(true)} />}
                                 {channel === 'slack' && <SlackSetup onLinked={() => setLinked(true)} />}
+                                {channel === 'discord' && <DiscordSetup onLinked={() => setLinked(true)} />}
+                                {channel === 'ntfy' && <NtfySetup onLinked={() => setLinked(true)} />}
                                 {channel === 'whatsapp' && <WhatsAppSetup onSaved={() => setLinked(true)} />}
                             </div>
                         </>}

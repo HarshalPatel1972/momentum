@@ -14,6 +14,8 @@ export function ConnectDetectedIDEs():Promise<Record<string, string>>;
 
 export function ConnectIDE(arg1:string):Promise<string>;
 
+export function DetectDiscordUser(arg1:string):Promise<main.DiscordLink>;
+
 export function DetectSlackUser(arg1:string,arg2:string):Promise<main.SlackLink>;
 
 export function DetectTelegramChat(arg1:string):Promise<main.TelegramChat>;
@@ -24,7 +26,11 @@ export function DownloadUpdate(arg1:string):Promise<void>;
 
 export function GetActivity():Promise<Array<main.Activity>>;
 
+export function GetDiscordSettings():Promise<main.DiscordConfig>;
+
 export function GetIDESnippet(arg1:string):Promise<string>;
+
+export function GetNtfySettings():Promise<main.NtfyConfig>;
 
 export function GetPublicURL():Promise<string>;
 
@@ -46,7 +52,11 @@ export function ListIDEs():Promise<Array<main.IDEStatus>>;
 
 export function LoadConfig():Promise<string>;
 
+export function NewNtfyTopic():Promise<string>;
+
 export function OpenDataFolder():Promise<void>;
+
+export function OpenDiscordInvite(arg1:string):Promise<string>;
 
 export function OpenSlackAppSetup():Promise<void>;
 
@@ -55,6 +65,10 @@ export function OpenURL(arg1:string):Promise<void>;
 export function QuitApp():Promise<void>;
 
 export function ReadLogs():Promise<Array<string>>;
+
+export function SaveDiscord(arg1:string,arg2:main.DiscordLink):Promise<string>;
+
+export function SaveNtfy(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function SaveSlack(arg1:string,arg2:string,arg3:main.SlackLink):Promise<string>;
 

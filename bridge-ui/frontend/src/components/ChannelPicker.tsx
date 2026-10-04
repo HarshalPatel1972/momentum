@@ -1,11 +1,13 @@
 import { BrandLogo } from '../lib';
 
-export type ChannelId = 'telegram' | 'slack' | 'whatsapp';
+export type ChannelId = 'telegram' | 'slack' | 'discord' | 'ntfy' | 'whatsapp';
 
 export const CHANNELS: { id: ChannelId; name: string; note: string }[] = [
-    { id: 'telegram', name: 'Telegram', note: 'Recommended · 1 minute' },
+    { id: 'telegram', name: 'Telegram', note: 'Recommended · 1 min' },
     { id: 'slack', name: 'Slack', note: 'For work · 3 min' },
-    { id: 'whatsapp', name: 'WhatsApp', note: 'Needs an ngrok token' },
+    { id: 'discord', name: 'Discord', note: 'Popular with devs · 3 min' },
+    { id: 'ntfy', name: 'ntfy', note: 'No account · any country' },
+    { id: 'whatsapp', name: 'WhatsApp', note: 'Basic · needs ngrok' },
 ];
 
 /** Segmented choice of where questions go, with each app's real logo. */

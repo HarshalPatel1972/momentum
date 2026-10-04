@@ -26,6 +26,8 @@ type BridgeConfig struct {
 	Source         string         `json:"source,omitempty"`
 	Telegram       TelegramConfig `json:"telegram"`
 	Slack          SlackConfig    `json:"slack"`
+	Discord        DiscordConfig  `json:"discord"`
+	Ntfy           NtfyConfig     `json:"ntfy"`
 	Gmail          GmailConfig    `json:"gmail"`
 	WhatsApp       WhatsAppConfig `json:"whatsapp"`
 	SMS            SMSConfig      `json:"sms"`
@@ -49,6 +51,26 @@ type SlackConfig struct {
 	UserName  string `json:"user_name,omitempty"`  // for display only
 	ChannelID string `json:"channel_id,omitempty"` // DM with that person
 	Team      string `json:"team,omitempty"`       // for display only
+}
+
+type DiscordConfig struct {
+	BotToken  string `json:"bot_token"`
+	UserID    string `json:"user_id"`              // the only person who may answer
+	UserName  string `json:"user_name,omitempty"`  // for display only
+	ChannelID string `json:"channel_id,omitempty"` // DM with that person
+}
+
+type NtfyConfig struct {
+	Server string `json:"server,omitempty"` // default https://ntfy.sh
+	Topic  string `json:"topic"`            // long and random: knowing it is what lets you read the questions
+	Token  string `json:"token,omitempty"`  // access token, for protected or self-hosted servers
+}
+
+func (n NtfyConfig) server() string {
+	if n.Server == "" {
+		return "https://ntfy.sh"
+	}
+	return strings.TrimRight(n.Server, "/")
 }
 
 type GmailConfig struct {
@@ -175,6 +197,14 @@ func configProblem(cfg BridgeConfig) string {
 		if cfg.Slack.BotToken == "" || cfg.Slack.AppToken == "" || cfg.Slack.UserID == "" {
 			return "Slack tokens / user not set"
 		}
+	case "discord":
+		if cfg.Discord.BotToken == "" || cfg.Discord.UserID == "" || cfg.Discord.ChannelID == "" {
+			return "Discord bot token / user not set"
+		}
+	case "ntfy":
+		if len(cfg.Ntfy.Topic) < 12 {
+			return "ntfy topic not set (it must be long and random)"
+		}
 	case "whatsapp":
 		if cfg.WhatsApp.APIKey == "" || cfg.WhatsApp.Phone == "" {
 			return "WhatsApp API key / phone not set"
@@ -187,7 +217,7 @@ func configProblem(cfg BridgeConfig) string {
 	case "":
 		return "no notification channel configured"
 	default:
-		return fmt.Sprintf("channel %q is not supported yet (use Telegram, Slack or WhatsApp)", cfg.Channel)
+		return fmt.Sprintf("channel %q is not supported", cfg.Channel)
 	}
 	return ""
 }

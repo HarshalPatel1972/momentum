@@ -12,7 +12,7 @@ interface Props {
 }
 
 export const TRUST = [
-    { icon: Lock, title: 'Nothing on your PC is exposed', text: 'Momentum only makes outgoing connections to Telegram or Slack. No open ports, tunnels or remote access.' },
+    { icon: Lock, title: 'Nothing on your PC is exposed', text: 'Momentum only makes outgoing connections to your messaging app. No open ports, tunnels or remote access.' },
     { icon: UserCheck, title: 'Only you can answer', text: 'Taps and messages from any other chat are ignored, and each question can be answered once.' },
     { icon: ServerOff, title: 'No Momentum servers', text: 'No account, no cloud, no tracking. Your settings stay in this PC’s AppData folder.' },
     { icon: Timer, title: 'Safe when you’re busy', text: 'Unanswered questions expire after 15 minutes and count as “not approved”.' },
@@ -37,9 +37,12 @@ export default function Home({ state, activity, go, toast, refresh }: Props) {
         toast(res.startsWith('Error') ? res.replace(/^Error:\s*/, '') : `Got your answer: “${res}”`);
     };
 
-    const channelName = state.channel === 'slack'
-        ? `${state.slackUser || 'Slack'}${state.slackTeam ? ` · ${state.slackTeam}` : ''}`
-        : state.channel === 'whatsapp' ? 'WhatsApp' : (state.chatName || 'Telegram');
+    const channelName = {
+        slack: `${state.slackUser || 'Slack'}${state.slackTeam ? ` · ${state.slackTeam}` : ''}`,
+        discord: state.discordUser || 'Discord',
+        ntfy: 'ntfy',
+        whatsapp: 'WhatsApp',
+    }[state.channel] || state.chatName || 'Telegram';
     const channel = <><BrandLogo name={state.channel || 'telegram'} size={16} /> {channelName}</>;
 
     return (

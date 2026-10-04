@@ -43,6 +43,9 @@ type tgSent struct {
 }
 
 func newFakeTelegram(t *testing.T) *fakeTelegram {
+	recentChatsMu.Lock()
+	recentChats = map[string]seenChat{} // each test starts with no remembered chats
+	recentChatsMu.Unlock()
 	f := &fakeTelegram{edits: map[int64]string{}, nextMsg: 100, newUpdate: make(chan struct{}, 100)}
 	f.srv = httptest.NewServer(http.HandlerFunc(f.serve))
 	t.Cleanup(f.srv.Close)
@@ -270,7 +273,7 @@ func TestTelegramButtonTapAnswers(t *testing.T) {
 		t.Fatalf("got %+v", r)
 	}
 	// The message is edited to show the outcome and lose its buttons.
-	if e := tg.waitEdit(t, m.ID); !strings.Contains(e, "Answered:</b> No") {
+	if e := tg.waitEdit(t, m.ID); !strings.Contains(e, "Answered: No") {
 		t.Errorf("edit = %s", e)
 	}
 	// A second tap on the old message is refused politely.
