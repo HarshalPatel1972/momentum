@@ -62,7 +62,7 @@ export default function StoryScene() {
                 <div className="phone-screen">
                     <div className="phone-notch" />
                     <div className="tg-head">
-                        <div className="tg-avatar"><Logo size={18} /></div>
+                        <div className="tg-avatar"><Logo size={28} ping={false} /></div>
                         <div>
                             <div className="tg-name">Momentum Bot</div>
                             <div className="tg-sub">bot</div>

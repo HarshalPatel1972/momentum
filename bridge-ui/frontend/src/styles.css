@@ -170,6 +170,10 @@ code, pre { font-family: var(--mono); }
 .trust-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 34px; color: var(--text-2); font-size: 12.5px; }
 .trust-row span { display: inline-flex; align-items: center; gap: 6px; }
 .trust-row svg { color: var(--ok); }
+.works-with { margin-top: 26px; }
+.works-with .label { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+.works-with .logos { display: flex; flex-wrap: wrap; gap: 8px; }
+.works-with .ide-logo { width: 34px; height: 34px; }
 .welcome-right { position: relative; display: flex; align-items: center; justify-content: center; padding: 30px; overflow: hidden; }
 
 /* story scene */
@@ -200,7 +204,7 @@ code, pre { font-family: var(--mono); }
 .phone-screen { position: relative; height: 100%; border-radius: 28px; overflow: hidden; background: #0e1621; display: flex; flex-direction: column; }
 .phone-notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 64px; height: 18px; border-radius: 12px; background: #000; z-index: 2; }
 .tg-head { padding: 34px 12px 10px; display: flex; align-items: center; gap: 8px; background: #17212b; }
-.tg-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; }
+.tg-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; }
 .tg-name { font-size: 12px; font-weight: 600; }
 .tg-sub { font-size: 10px; color: #6d8094; }
 .tg-chat { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
@@ -265,7 +269,7 @@ code, pre { font-family: var(--mono); }
   display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px;
   background: var(--ok-soft); border: 1px solid rgba(61, 220, 151, .25);
 }
-.linked-ico { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--tg); color: #fff; flex: none; }
+.linked-ico { width: 38px; height: 38px; display: grid; place-items: center; flex: none; }
 
 .test-stage { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 30px 20px; }
 .test-orb {
@@ -348,7 +352,7 @@ code, pre { font-family: var(--mono); }
 .ide-list { display: flex; flex-direction: column; }
 .ide-item { min-width: 0; display: flex; align-items: center; gap: 13px; padding: 12px 16px; border-top: 1px solid var(--line); }
 .ide-item:first-child { border-top: 0; }
-.ide-logo { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; font-weight: 800; font-size: 12px; color: #fff; }
+.ide-logo { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none; background: var(--surface-2); border: 1px solid var(--line-strong); }
 .ide-name { font-weight: 600; }
 .ide-sub { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .snippet { margin: 0 16px 14px 63px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
@@ -385,3 +389,14 @@ code, pre { font-family: var(--mono); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .side-status span { display: block; font-size: 11.5px; }
+
+/* channel picker */
+.channel-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.channel-picker button {
+  display: flex; align-items: center; gap: 11px; padding: 12px 14px; border-radius: 12px; text-align: left;
+  background: var(--bg-raised); border: 1px solid var(--line-strong); transition: border-color .15s, background .15s;
+}
+.channel-picker button:hover { background: var(--surface-2); }
+.channel-picker button.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
+.channel-picker b { display: block; font-size: 13.5px; }
+.channel-picker .grow > span { display: block; font-size: 11.5px; color: var(--text-3); }

@@ -1,7 +1,13 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Github, ShieldCheck } from 'lucide-react';
-import { api, Brand, REPO_URL } from '../lib';
+import { api, Brand, IdeTile, REPO_URL } from '../lib';
 import StoryScene from './StoryScene';
+
+const WORKS_WITH: [string, string][] = [
+    ['vscode', 'VS Code'], ['cursor', 'Cursor'], ['windsurf', 'Windsurf'], ['antigravity', 'Antigravity'],
+    ['claude-code', 'Claude Code'], ['codex', 'Codex'], ['gemini-cli', 'Gemini CLI'], ['kiro', 'Kiro'],
+    ['zed', 'Zed'], ['other', 'Any MCP client'],
+];
 
 export default function Welcome({ onStart }: { onStart: () => void }) {
     const rise = (d: number) => ({ initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { delay: d, duration: .5 } });
@@ -31,6 +37,12 @@ export default function Welcome({ onStart }: { onStart: () => void }) {
                         <span><ShieldCheck size={14} /> Free and open source</span>
                         <span><ShieldCheck size={14} /> No account, no Momentum servers</span>
                         <span><ShieldCheck size={14} /> Nothing on your PC is exposed to the internet</span>
+                    </motion.div>
+                    <motion.div className="works-with" {...rise(.44)}>
+                        <div className="label">Works with</div>
+                        <div className="logos">
+                            {WORKS_WITH.map(([id, name]) => <div key={id} title={name}><IdeTile id={id} /></div>)}
+                        </div>
                     </motion.div>
                 </div>
             </div>

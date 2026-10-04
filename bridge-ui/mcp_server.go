@@ -41,7 +41,7 @@ func runMCPServer(opts mcpOptions) {
 	)
 
 	ask := mcp.NewTool("ask_remote_human",
-		mcp.WithDescription("Ask the user a question on their phone (Telegram/WhatsApp) and wait for the answer. "+
+		mcp.WithDescription("Ask the user a question on their phone (Telegram, Slack or WhatsApp) and wait for the answer. "+
 			"Use this for approvals before destructive or irreversible actions and for any clarification you need; "+
 			"the user may be away from the computer and cannot see questions asked in chat."),
 		mcp.WithString("question", mcp.Required(), mcp.Description("Short, self-contained question, readable on a phone. Include the file/command involved.")),

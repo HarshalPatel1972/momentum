@@ -4,11 +4,13 @@ import { ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
 import { Brand } from '../lib';
 import TelegramSetup from './TelegramSetup';
 import WhatsAppSetup from './WhatsAppSetup';
+import SlackSetup from './SlackSetup';
+import ChannelPicker, { ChannelId } from './ChannelPicker';
 import IdeList from './IdeList';
 import TestQuestion from './TestQuestion';
 
 const STEPS = [
-    { title: 'Link your phone', desc: 'A private Telegram bot, just for you' },
+    { title: 'Link your phone', desc: 'Telegram, Slack or WhatsApp' },
     { title: 'Connect your IDEs', desc: 'One click for every IDE we find' },
     { title: 'Try it for real', desc: 'Send yourself a test question' },
 ];
@@ -16,7 +18,7 @@ const STEPS = [
 export default function Setup({ onFinish, onBack, initialStep = 0 }: { onFinish: () => void; onBack: () => void; initialStep?: number }) {
     const [step, setStep] = useState(Math.min(Math.max(initialStep, 0), 2));
     const [linked, setLinked] = useState(false);
-    const [whatsapp, setWhatsapp] = useState(false);
+    const [channel, setChannel] = useState<ChannelId>('telegram');
     const [tested, setTested] = useState(false);
 
     const canNext = step === 0 ? linked : true;
@@ -38,28 +40,25 @@ export default function Setup({ onFinish, onBack, initialStep = 0 }: { onFinish:
                 </div>
                 <div className="rail-foot">
                     <Lock size={14} />
-                    <span>Everything stays on this PC. Momentum has no servers and no account. Messages go straight between your PC and Telegram.</span>
+                    <span>Everything stays on this PC. Momentum has no servers and no account. Messages go straight between your PC and your messaging app.</span>
                 </div>
             </aside>
 
             <main className="setup-main">
                 <AnimatePresence mode="wait">
-                    <motion.div key={step + (whatsapp ? 'w' : '')} className="setup-inner"
+                    <motion.div key={step} className="setup-inner"
                         initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: .22 }}>
                         <div className="eyebrow">Step {step + 1} of 3</div>
 
-                        {step === 0 && !whatsapp && <>
+                        {step === 0 && <>
                             <h2>Link your phone</h2>
-                            <p className="lede">Momentum talks to you through your own Telegram bot. It takes about a minute, and you only do it once.</p>
-                            <TelegramSetup onLinked={() => setLinked(true)} />
-                            <button className="btn btn-ghost btn-sm" style={{ marginTop: 14 }} onClick={() => setWhatsapp(true)}>Prefer WhatsApp?</button>
-                        </>}
-
-                        {step === 0 && whatsapp && <>
-                            <h2>Use WhatsApp</h2>
-                            <p className="lede">Answer agent questions from WhatsApp instead.</p>
-                            <WhatsAppSetup onSaved={() => setLinked(true)} />
-                            <button className="btn btn-ghost btn-sm" style={{ marginTop: 14 }} onClick={() => setWhatsapp(false)}>Back to Telegram</button>
+                            <p className="lede">Choose where your agents&apos; questions should reach you. You only do this once.</p>
+                            <ChannelPicker value={channel} onChange={c => { setChannel(c); setLinked(false); }} />
+                            <div style={{ marginTop: 22 }}>
+                                {channel === 'telegram' && <TelegramSetup onLinked={() => setLinked(true)} />}
+                                {channel === 'slack' && <SlackSetup onLinked={() => setLinked(true)} />}
+                                {channel === 'whatsapp' && <WhatsAppSetup onSaved={() => setLinked(true)} />}
+                            </div>
                         </>}
 
                         {step === 1 && <>

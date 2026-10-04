@@ -55,6 +55,8 @@ export namespace main {
 	    channel: string;
 	    chatName: string;
 	    botUsername: string;
+	    slackUser: string;
+	    slackTeam: string;
 	    running: boolean;
 	    atDesk: boolean;
 	    idesLinked: number;
@@ -73,6 +75,8 @@ export namespace main {
 	        this.channel = source["channel"];
 	        this.chatName = source["chatName"];
 	        this.botUsername = source["botUsername"];
+	        this.slackUser = source["slackUser"];
+	        this.slackTeam = source["slackTeam"];
 	        this.running = source["running"];
 	        this.atDesk = source["atDesk"];
 	        this.idesLinked = source["idesLinked"];
@@ -105,6 +109,48 @@ export namespace main {
 	        this.configPath = source["configPath"];
 	        this.manual = source["manual"];
 	        this.note = source["note"];
+	        this.error = source["error"];
+	    }
+	}
+	export class SlackConfig {
+	    bot_token: string;
+	    app_token: string;
+	    user_id: string;
+	    user_name?: string;
+	    channel_id?: string;
+	    team?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SlackConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.bot_token = source["bot_token"];
+	        this.app_token = source["app_token"];
+	        this.user_id = source["user_id"];
+	        this.user_name = source["user_name"];
+	        this.channel_id = source["channel_id"];
+	        this.team = source["team"];
+	    }
+	}
+	export class SlackLink {
+	    userId: string;
+	    userName: string;
+	    channelId: string;
+	    team: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SlackLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.userId = source["userId"];
+	        this.userName = source["userName"];
+	        this.channelId = source["channelId"];
+	        this.team = source["team"];
 	        this.error = source["error"];
 	    }
 	}

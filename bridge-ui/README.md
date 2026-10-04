@@ -32,6 +32,7 @@ Source map:
 |---|---|
 | `hub.go` | The single per-user hub: localhost API for IDEs; starts the Telegram poller (or ngrok tunnel for WhatsApp) |
 | `telegram.go` | Telegram: questions with answer buttons, long-polling for taps/replies, chat-ID detection |
+| `slack.go` | Slack: DM questions with Block Kit buttons over Socket Mode, app manifest, user detection |
 | `mcp_server.go` | `--mcp` mode: the thin MCP stdio server each IDE launches; starts the hub on demand |
 | `ide.go` | Detects IDEs and edits their MCP config files (`--ide-*` flags, "Connect your IDEs" screen) |
 | `notify.go`, `pages.go` | WhatsApp message and the mobile answer page it links to |

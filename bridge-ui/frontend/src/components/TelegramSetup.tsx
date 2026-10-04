@@ -78,7 +78,7 @@ export default function TelegramSetup({ onLinked, showSteps = true }: Props) {
 
             {linked && !error && (
                 <motion.div className="linked" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                    <div className="linked-ico"><TelegramIcon size={20} /></div>
+                    <div className="linked-ico"><TelegramIcon size={38} /></div>
                     <div className="grow">
                         <div style={{ fontWeight: 600 }}>Linked to {linked.name}</div>
                         <div className="muted" style={{ fontSize: 12.5 }}>

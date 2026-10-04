@@ -14,6 +14,8 @@ export function ConnectDetectedIDEs():Promise<Record<string, string>>;
 
 export function ConnectIDE(arg1:string):Promise<string>;
 
+export function DetectSlackUser(arg1:string,arg2:string):Promise<main.SlackLink>;
+
 export function DetectTelegramChat(arg1:string):Promise<main.TelegramChat>;
 
 export function DisconnectIDE(arg1:string):Promise<string>;
@@ -25,6 +27,10 @@ export function GetActivity():Promise<Array<main.Activity>>;
 export function GetIDESnippet(arg1:string):Promise<string>;
 
 export function GetPublicURL():Promise<string>;
+
+export function GetSlackManifest():Promise<string>;
+
+export function GetSlackSettings():Promise<main.SlackConfig>;
 
 export function GetState():Promise<main.AppState>;
 
@@ -42,11 +48,15 @@ export function LoadConfig():Promise<string>;
 
 export function OpenDataFolder():Promise<void>;
 
+export function OpenSlackAppSetup():Promise<void>;
+
 export function OpenURL(arg1:string):Promise<void>;
 
 export function QuitApp():Promise<void>;
 
 export function ReadLogs():Promise<Array<string>>;
+
+export function SaveSlack(arg1:string,arg2:string,arg3:main.SlackLink):Promise<string>;
 
 export function SaveTelegram(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 

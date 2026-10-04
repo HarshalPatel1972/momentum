@@ -82,6 +82,8 @@ type AppState struct {
 	Channel     string `json:"channel"`
 	ChatName    string `json:"chatName"`
 	BotUsername string `json:"botUsername"`
+	SlackUser   string `json:"slackUser"`
+	SlackTeam   string `json:"slackTeam"`
 	Running     bool   `json:"running"`
 	AtDesk      bool   `json:"atDesk"`
 	IDEsLinked  int    `json:"idesLinked"`
@@ -98,6 +100,8 @@ func (a *App) GetState() AppState {
 		Channel:     cfg.Channel,
 		ChatName:    cfg.Telegram.ChatName,
 		BotUsername: cfg.Telegram.BotUsername,
+		SlackUser:   cfg.Slack.UserName,
+		SlackTeam:   cfg.Slack.Team,
 		Running:     a.IsBridgeRunning(),
 		AtDesk:      cfg.AtDesk,
 		DataDir:     dataDir(),
@@ -211,6 +215,52 @@ func (a *App) SaveTelegram(token, chatID, chatName, botUsername string) string {
 	}
 	return a.applyConfig(cfg)
 }
+
+// SaveSlack stores the Slack channel and makes it active. Returns "" on success.
+func (a *App) SaveSlack(botToken, appToken string, link SlackLink) string {
+	cfg, _ := loadConfig()
+	cfg.Channel = "slack"
+	cfg.Slack = SlackConfig{
+		BotToken: strings.TrimSpace(botToken), AppToken: strings.TrimSpace(appToken),
+		UserID: link.UserID, UserName: link.UserName, ChannelID: link.ChannelID, Team: link.Team,
+	}
+	if p := configProblem(cfg); p != "" {
+		return p
+	}
+	return a.applyConfig(cfg)
+}
+
+// GetSlackSettings returns the saved Slack fields for editing.
+func (a *App) GetSlackSettings() SlackConfig {
+	cfg, _ := loadConfig()
+	return cfg.Slack
+}
+
+// DetectSlackUser waits (up to 60s) for the user to DM the Momentum Slack app.
+func (a *App) DetectSlackUser(botToken, appToken string) SlackLink {
+	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Second)
+	defer cancel()
+	// Slack hands each event to just one open socket, so make sure ours is the only one.
+	if a.hub.IsRunning() {
+		a.hub.mu.Lock()
+		polling := a.hub.slKey != ""
+		a.hub.mu.Unlock()
+		if polling {
+			a.hub.Stop() // restarted when the settings are saved
+		}
+	} else if h, err := newHubClient().health(ctx); err == nil && h.Daemon {
+		c := newHubClient()
+		c.post(ctx, "/api/shutdown")
+		c.waitGone(5 * time.Second)
+	}
+	return DetectSlackUser(ctx, botToken, appToken, 60*time.Second)
+}
+
+// OpenSlackAppSetup opens Slack's "create app" page with Momentum's manifest pre-filled.
+func (a *App) OpenSlackAppSetup() { runtime.BrowserOpenURL(a.ctx, SlackCreateAppURL()) }
+
+// GetSlackManifest returns the app manifest to paste manually.
+func (a *App) GetSlackManifest() string { return slackManifest }
 
 // SaveWhatsApp stores the WhatsApp (CallMeBot) channel and makes it active.
 func (a *App) SaveWhatsApp(apiKey, phone, ngrokToken string) string {

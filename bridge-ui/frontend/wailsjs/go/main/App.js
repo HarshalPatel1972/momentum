@@ -26,6 +26,10 @@ export function ConnectIDE(arg1) {
   return window['go']['main']['App']['ConnectIDE'](arg1);
 }
 
+export function DetectSlackUser(arg1, arg2) {
+  return window['go']['main']['App']['DetectSlackUser'](arg1, arg2);
+}
+
 export function DetectTelegramChat(arg1) {
   return window['go']['main']['App']['DetectTelegramChat'](arg1);
 }
@@ -48,6 +52,14 @@ export function GetIDESnippet(arg1) {
 
 export function GetPublicURL() {
   return window['go']['main']['App']['GetPublicURL']();
+}
+
+export function GetSlackManifest() {
+  return window['go']['main']['App']['GetSlackManifest']();
+}
+
+export function GetSlackSettings() {
+  return window['go']['main']['App']['GetSlackSettings']();
 }
 
 export function GetState() {
@@ -82,6 +94,10 @@ export function OpenDataFolder() {
   return window['go']['main']['App']['OpenDataFolder']();
 }
 
+export function OpenSlackAppSetup() {
+  return window['go']['main']['App']['OpenSlackAppSetup']();
+}
+
 export function OpenURL(arg1) {
   return window['go']['main']['App']['OpenURL'](arg1);
 }
@@ -92,6 +108,10 @@ export function QuitApp() {
 
 export function ReadLogs() {
   return window['go']['main']['App']['ReadLogs']();
+}
+
+export function SaveSlack(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveSlack'](arg1, arg2, arg3);
 }
 
 export function SaveTelegram(arg1, arg2, arg3, arg4) {

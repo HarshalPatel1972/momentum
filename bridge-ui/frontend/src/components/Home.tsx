@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, Coffee, Lock, Plug, Send, ServerOff, ShieldCheck, Smartphone, Timer, UserCheck } from 'lucide-react';
-import { Activity, api, AppState, TelegramIcon, Toggle } from '../lib';
+import { Activity, api, AppState, BrandLogo, Toggle } from '../lib';
 import ActivityList from './ActivityList';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export const TRUST = [
-    { icon: Lock, title: 'Nothing on your PC is exposed', text: 'Momentum only makes outgoing connections to Telegram. No open ports, tunnels or remote access.' },
+    { icon: Lock, title: 'Nothing on your PC is exposed', text: 'Momentum only makes outgoing connections to Telegram or Slack. No open ports, tunnels or remote access.' },
     { icon: UserCheck, title: 'Only you can answer', text: 'Taps and messages from any other chat are ignored, and each question can be answered once.' },
     { icon: ServerOff, title: 'No Momentum servers', text: 'No account, no cloud, no tracking. Your settings stay in this PC’s AppData folder.' },
     { icon: Timer, title: 'Safe when you’re busy', text: 'Unanswered questions expire after 15 minutes and count as “not approved”.' },
@@ -37,9 +37,10 @@ export default function Home({ state, activity, go, toast, refresh }: Props) {
         toast(res.startsWith('Error') ? res.replace(/^Error:\s*/, '') : `Got your answer: “${res}”`);
     };
 
-    const channel = state.channel === 'whatsapp'
-        ? <><Smartphone size={15} /> WhatsApp</>
-        : <><TelegramIcon size={15} /> {state.chatName || 'Telegram'}</>;
+    const channelName = state.channel === 'slack'
+        ? `${state.slackUser || 'Slack'}${state.slackTeam ? ` · ${state.slackTeam}` : ''}`
+        : state.channel === 'whatsapp' ? 'WhatsApp' : (state.chatName || 'Telegram');
+    const channel = <><BrandLogo name={state.channel || 'telegram'} size={16} /> {channelName}</>;
 
     return (
         <div className="page">
@@ -72,7 +73,7 @@ export default function Home({ state, activity, go, toast, refresh }: Props) {
                         </div>
                     </div>
                     <div className="fact">
-                        <div className="fact-label">Your phone</div>
+                        <div className="fact-label">Answers from</div>
                         <div className="fact-value">{channel}</div>
                     </div>
                     <div className="fact" style={{ cursor: 'pointer' }} onClick={() => go('ides')}>

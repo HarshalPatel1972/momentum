@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { BookOpen, Bug, Check, FolderOpen, Github, Heart, Power, Scale, ScrollText, Share2, Trash2 } from 'lucide-react';
-import { Activity, api, AppState, Logo, REPO_URL, TelegramIcon, Toggle } from '../lib';
+import { Activity, api, AppState, Logo, REPO_URL, Toggle } from '../lib';
 import ActivityList from './ActivityList';
 import IdeList from './IdeList';
 import TelegramSetup from './TelegramSetup';
 import WhatsAppSetup from './WhatsAppSetup';
+import SlackSetup from './SlackSetup';
+import ChannelPicker, { ChannelId } from './ChannelPicker';
 import { TRUST } from './Home';
 
 export function ActivityPage({ activity, toast }: { activity: Activity[]; toast: (m: string) => void }) {
@@ -57,7 +59,7 @@ export function IdesPage({ refresh, toast }: { refresh: () => void; toast: (m: s
 }
 
 export function SettingsPage({ state, refresh, toast }: { state: AppState; refresh: () => void; toast: (m: string) => void }) {
-    const [channel, setChannel] = useState(state.channel === 'whatsapp' ? 'whatsapp' : 'telegram');
+    const [channel, setChannel] = useState<ChannelId>((['telegram', 'slack', 'whatsapp'].includes(state.channel) ? state.channel : 'telegram') as ChannelId);
     const [logs, setLogs] = useState<string[] | null>(null);
 
     const showLogs = async () => setLogs(logs ? null : await api.logs());
@@ -68,15 +70,12 @@ export function SettingsPage({ state, refresh, toast }: { state: AppState; refre
 
             <div className="section-label" style={{ marginTop: 0 }}>Your phone</div>
             <div className="card card-pad">
-                <div className="row" style={{ marginBottom: 18 }}>
-                    <button className={`btn btn-sm ${channel === 'telegram' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setChannel('telegram')}><TelegramIcon size={14} /> Telegram</button>
-                    <button className={`btn btn-sm ${channel === 'whatsapp' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setChannel('whatsapp')}>WhatsApp</button>
-                    <span className="spacer" />
-                    <span className="badge ok">Active: {state.channel === 'whatsapp' ? 'WhatsApp' : 'Telegram'}</span>
+                <ChannelPicker value={channel} onChange={setChannel} active={state.channel} />
+                <div style={{ marginTop: 20 }}>
+                    {channel === 'telegram' && <TelegramSetup showSteps={false} onLinked={() => { toast('Telegram linked. Questions now go there'); refresh(); }} />}
+                    {channel === 'slack' && <SlackSetup onLinked={() => { toast('Slack linked. Questions now go there'); refresh(); }} />}
+                    {channel === 'whatsapp' && <WhatsAppSetup onSaved={refresh} />}
                 </div>
-                {channel === 'telegram'
-                    ? <TelegramSetup showSteps={false} onLinked={() => { toast('Telegram linked'); refresh(); }} />
-                    : <WhatsAppSetup onSaved={refresh} />}
             </div>
 
             <div className="section-label">Behaviour</div>
@@ -149,7 +148,7 @@ export function AboutPage({ state, toast }: { state: AppState; toast: (m: string
                     <div className="card-title" style={{ marginBottom: 12 }}>Why Momentum exists</div>
                     <p>AI agents can now work for hours on their own: refactoring, fixing tests, shipping features. But the moment they need a human decision ("delete these files?", "which approach?"), they stop and wait. If you've stepped away, they wait for hours.</p>
                     <p>Momentum keeps that work moving. It gives every agent a way to reach you on your phone, wherever you are. You make the decision in one tap, and the agent picks up exactly where it left off.</p>
-                    <p>It's deliberately small: one app on your PC, your own Telegram bot, and nothing in between.</p>
+                    <p>It's deliberately small: one app on your PC, your own Telegram bot or Slack app, and nothing in between.</p>
                 </div>
                 <div className="card card-pad">
                     <div className="card-title">Our promises</div>

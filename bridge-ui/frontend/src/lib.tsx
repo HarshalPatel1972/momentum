@@ -9,6 +9,8 @@ export interface AppState {
     channel: string;
     chatName: string;
     botUsername: string;
+    slackUser: string;
+    slackTeam: string;
     running: boolean;
     atDesk: boolean;
     idesLinked: number;
@@ -41,6 +43,7 @@ export interface IDEStatus {
 }
 
 export interface TelegramChat { id: string; name: string; bot: string; error?: string; }
+export interface SlackLink { userId: string; userName: string; channelId: string; team: string; error?: string; }
 
 // Typed views of the generated Wails bindings.
 export const api = {
@@ -58,6 +61,11 @@ export const api = {
     telegram: () => Go.GetTelegramSettings() as Promise<{ bot_token: string; chat_id: string; chat_name?: string; bot_username?: string }>,
     whatsapp: () => Go.GetWhatsAppSettings() as Promise<Record<string, string>>,
     saveWhatsApp: (key: string, phone: string, ngrok: string) => Go.SaveWhatsApp(key, phone, ngrok),
+    slack: () => Go.GetSlackSettings() as Promise<{ bot_token: string; app_token: string; user_id: string; user_name?: string; channel_id?: string; team?: string }>,
+    detectSlack: (bot: string, app: string) => Go.DetectSlackUser(bot, app) as Promise<SlackLink>,
+    saveSlack: (bot: string, app: string, link: SlackLink) => Go.SaveSlack(bot, app, link as any),
+    openSlackSetup: () => Go.OpenSlackAppSetup(),
+    slackManifest: () => Go.GetSlackManifest(),
     setAtDesk: (v: boolean) => Go.SetAtDesk(v),
     sendTest: () => Go.SendTestQuestion(),
     logs: () => Go.ReadLogs() as Promise<string[]>,
@@ -84,21 +92,25 @@ export function duration(from?: string, to?: string): string {
     return s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
 }
 
-/** The Momentum mark: a forward double-chevron. Unique gradient id per instance. */
-export function Logo({ size = 32 }: { size?: number }) {
+/** The Momentum mark: a play arrow in motion, plus the green "ping" that reaches your phone.
+ *  Same artwork as docs/logo.svg and the app/tray icon. Unique gradient id per instance. */
+export function Logo({ size = 32, ping = true }: { size?: number; ping?: boolean }) {
     const id = useId().replace(/:/g, '');
     return (
-        <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+        <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
             <defs>
                 <linearGradient id={`g${id}`} x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#8b6cff" />
-                    <stop offset="1" stopColor="#5b8cff" />
+                    <stop offset="0" stopColor="#7c5cff" />
+                    <stop offset=".55" stopColor="#5b7cff" />
+                    <stop offset="1" stopColor="#2fb6ff" />
                 </linearGradient>
             </defs>
-            <rect width="32" height="32" rx="9" fill={`url(#g${id})`} />
-            <path d="M8.5 21.5 14 16 8.5 10.5" stroke="#fff" strokeOpacity=".5" strokeWidth="2.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M15.5 21.5 21 16 15.5 10.5" stroke="#fff" strokeWidth="2.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="24.5" cy="16" r="1.6" fill="#fff" />
+            <rect width="64" height="64" rx="15" fill={`url(#g${id})`} />
+            <rect x="10" y="25" width="10" height="4.4" rx="2.2" fill="#fff" opacity=".45" />
+            <rect x="6.5" y="31" width="13.5" height="4.4" rx="2.2" fill="#fff" opacity=".75" />
+            <rect x="10" y="37" width="10" height="4.4" rx="2.2" fill="#fff" opacity=".45" />
+            <path d="M25 20.5c0-2.5 2.7-4 4.8-2.7l17.4 10.8c2 1.3 2 4.2 0 5.5L29.8 44.9C27.7 46.2 25 44.7 25 42.2z" fill="#fff" />
+            {ping && <circle cx="51" cy="13" r="5.2" fill="#3ddc97" stroke="#6a6dff" strokeWidth="2.6" />}
         </svg>
     );
 }
@@ -116,24 +128,22 @@ export function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: 
     return <button className={`toggle ${on ? 'on' : ''}`} role="switch" aria-checked={on} disabled={disabled} onClick={() => onChange(!on)} />;
 }
 
-// Monogram tiles for IDEs (no third-party logos bundled).
-const ideStyle: Record<string, [string, string]> = {
-    'vscode': ['VS', '#1f7ad1'], 'vscode-insiders': ['VS', '#169c74'], 'cursor': ['Cu', '#2b2b33'],
-    'windsurf': ['Ws', '#0c9f9a'], 'antigravity': ['Ag', '#3a6df0'], 'claude-code': ['CC', '#c96442'],
-    'claude-desktop': ['Cl', '#b4593b'], 'gemini-cli': ['Ge', '#5b6cf0'], 'codex': ['Cx', '#10a37f'],
-    'cline': ['Cn', '#5a5a66'], 'roo': ['Ro', '#7a4fd6'], 'kiro': ['Ki', '#8a3ffc'], 'zed': ['Ze', '#4a8cff'],
-    'jetbrains': ['JB', '#e2367a'], 'other': ['{ }', '#3a3a44'],
-};
+// Official logos (see assets/logos/README.md for sources and licenses).
+const logoUrls = import.meta.glob('./assets/logos/*.svg', { eager: true, as: 'url' }) as Record<string, string>;
+export const logoUrl = (name: string) => logoUrls[`./assets/logos/${name}.svg`];
 
+/** A brand logo (IDE, Telegram, Slack…) as a plain image. */
+export function BrandLogo({ name, size = 18 }: { name: string; size?: number }) {
+    const url = logoUrl(name);
+    if (!url) return null;
+    return <img src={url} width={size} height={size} alt="" draggable={false} style={{ display: 'block' }} />;
+}
+
+/** IDE logo on a neutral tile, so every brand sits on the same footing. */
 export function IdeTile({ id }: { id: string }) {
-    const [label, bg] = ideStyle[id] || ['•', '#3a3a44'];
-    return <div className="ide-logo" style={{ background: bg }}>{label}</div>;
+    return <div className="ide-logo"><BrandLogo name={id} size={20} /></div>;
 }
 
 export function TelegramIcon({ size = 18 }: { size?: number }) {
-    return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M21.4 4.1 2.9 11.3c-1.3.5-1.2 1.2-.2 1.5l4.7 1.5 1.8 5.6c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.5c.3-1.3-.5-1.9-1.3-1.6Zm-3.6 3.3-8.7 7.9-.3 3.5-1.5-4.9 10-6.3c.5-.3.9-.1.5.2Z" />
-        </svg>
-    );
+    return <BrandLogo name="telegram" size={size} />;
 }

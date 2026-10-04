@@ -25,6 +25,7 @@ type BridgeConfig struct {
 	Channel        string         `json:"channel"`
 	Source         string         `json:"source,omitempty"`
 	Telegram       TelegramConfig `json:"telegram"`
+	Slack          SlackConfig    `json:"slack"`
 	Gmail          GmailConfig    `json:"gmail"`
 	WhatsApp       WhatsAppConfig `json:"whatsapp"`
 	SMS            SMSConfig      `json:"sms"`
@@ -39,6 +40,15 @@ type TelegramConfig struct {
 	ChatID      string `json:"chat_id"`
 	ChatName    string `json:"chat_name,omitempty"`    // for display only
 	BotUsername string `json:"bot_username,omitempty"` // for display only
+}
+
+type SlackConfig struct {
+	BotToken  string `json:"bot_token"`            // xoxb-…
+	AppToken  string `json:"app_token"`            // xapp-… (Socket Mode)
+	UserID    string `json:"user_id"`              // the only person who may answer
+	UserName  string `json:"user_name,omitempty"`  // for display only
+	ChannelID string `json:"channel_id,omitempty"` // DM with that person
+	Team      string `json:"team,omitempty"`       // for display only
 }
 
 type GmailConfig struct {
@@ -161,6 +171,10 @@ func configProblem(cfg BridgeConfig) string {
 		if cfg.Telegram.BotToken == "" || cfg.Telegram.ChatID == "" {
 			return "Telegram bot token / chat ID not set"
 		}
+	case "slack":
+		if cfg.Slack.BotToken == "" || cfg.Slack.AppToken == "" || cfg.Slack.UserID == "" {
+			return "Slack tokens / user not set"
+		}
 	case "whatsapp":
 		if cfg.WhatsApp.APIKey == "" || cfg.WhatsApp.Phone == "" {
 			return "WhatsApp API key / phone not set"
@@ -173,7 +187,7 @@ func configProblem(cfg BridgeConfig) string {
 	case "":
 		return "no notification channel configured"
 	default:
-		return fmt.Sprintf("channel %q is not supported yet (use Telegram or WhatsApp)", cfg.Channel)
+		return fmt.Sprintf("channel %q is not supported yet (use Telegram, Slack or WhatsApp)", cfg.Channel)
 	}
 	return ""
 }
