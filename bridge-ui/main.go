@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -205,7 +207,18 @@ func runWailsUI(startMini bool) {
 		},
 		BackgroundColour: &options.RGBA{R: 231, G: 228, B: 220, A: 1},
 		OnStartup:        app.startup,
-		OnBeforeClose:    app.beforeClose,
+		// Opening Momentum again brings the running window forward instead of
+		// starting a second copy that can't own the hub.
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: instanceID(),
+			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
+				if app != nil && app.ctx != nil {
+					runtime.WindowUnminimise(app.ctx)
+					app.ShowWindow()
+				}
+			},
+		},
+		OnBeforeClose: app.beforeClose,
 		Bind: []interface{}{
 			app,
 		},
@@ -299,4 +312,11 @@ func newLogger(role string) func(string) {
 		fmt.Fprintln(os.Stderr, line)
 		appendLog(line)
 	}
+}
+
+// instanceID is unique per data folder, so a test copy with its own
+// MOMENTUM_HOME doesn't hand over to the user's real Momentum.
+func instanceID() string {
+	sum := sha256.Sum256([]byte(strings.ToLower(dataDir())))
+	return "momentum-" + hex.EncodeToString(sum[:6])
 }
