@@ -188,7 +188,7 @@ func (c *ntfyChannel) handle(host *ChannelHost, message string) {
 // SendNtfyTest publishes a plain notification so the user can check they're subscribed.
 func SendNtfyTest(ctx context.Context, cfg NtfyConfig) error {
 	_, err := (&ntfyChannel{cfg: cfg}).publish(ctx, map[string]any{
-		"title":   "✅ Momentum is linked",
+		"title":   "Momentum is linked", // the tag below already adds the ✅
 		"message": "Questions from your AI agents will appear here.",
 		"tags":    []string{"white_check_mark"},
 	})
